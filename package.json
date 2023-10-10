@@ -1,0 +1,21 @@
+{
+  "name": "web-scrapper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node scrapper.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@contentful/rich-text-from-markdown": "^15.16.8",
+    "axios": "^1.5.1",
+    "contentful-management": "^11.1.1",
+    "jsdom": "^22.1.0",
+    "turndown": "^7.1.2",
+    "xml-js": "^1.6.11"
+  }
+}
