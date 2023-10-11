@@ -1,2 +1,2 @@
-const contentfulSpaceId = "cqvepi7k4s53";
+const contentfulSpaceId = "v4doujxxktp2";
 module.exports = { contentfulSpaceId };
