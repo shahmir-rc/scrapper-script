@@ -9,25 +9,47 @@ const { contentfulSpaceId } = require("./constant.js");
 var turndownService = new TurndownService();
 
 // Function to upload an image to Contentful and get its URL
-async function uploadImageToContentful(src) {
-    let titleImg = src.split("/")
-    titleImg = titleImg[titleImg.length - 1]
-    titleImg = titleImg.split("?")[0]
-    const img = `https://security.gallagher.com${src}`
+async function uploadImageToContentful(src, title) {
+    console.log("title here from src", title)
+    let imgTitle = src.split("/")
+    imgTitle = imgTitle[imgTitle.length - 1]
+    imgTitle = imgTitle.split("?")[0]
+    const type = imgTitle.split(".")[1]
+    const imageUrl = `https://security.gallagher.com${src}`
+
+
+
+    console.log("image title here", imgTitle)
+    console.log("image type here", type)
+    console.log("image url", imageUrl)
     try {
         const space = await client.getSpace(contentfulSpaceId);
         const environment = await space.getEnvironment('master');
+
+        // Check if an asset with the same title already exists
+        const existingAssets = await environment.getAssets({
+            'fields.title[match]': title,
+        });
+
+        console.log("existing assets here", existingAssets)
+
+        if (existingAssets && existingAssets.items && existingAssets.items.length > 0) {
+            // If an asset with the same title exists, return its ID
+            return existingAssets.items[0].sys.id;
+        }
+
+        console.log("not found image")
 
         // Create an asset from the external image URL
         const asset = await environment.createAsset({
             fields: {
                 title: {
-                    'en-US': 'External Image',
+                    'en-US': title,
                 },
                 file: {
                     'en-US': {
-                        fileName: 'external-image.jpg', // Adjust the file name as needed
-                        contentType: 'image/jpeg', // Adjust the content type as needed
+                        fileName: imgTitle, // Adjust the file name as needed
+                        contentType: `image/${type}`, // Adjust the content type as needed
                         upload: imageUrl,
                     },
                 },
@@ -39,9 +61,9 @@ async function uploadImageToContentful(src) {
 
         // Publish the asset
         await asset.publish();
-
-        // Return the URL of the uploaded asset
-        return asset.fields.file['en-US'].url;
+        console.log("asset here", asset)
+        // Return the id of the uploaded asset
+        return asset.sys.id;
     } catch (error) {
         console.error('Error uploading image to Contentful:', error);
     }
@@ -66,7 +88,8 @@ async function scrapeData(url) {
                 .textContent.trim();
             let image = document.querySelector(".article .field-image img")
             const imgSrc = image.getAttribute('src')
-            image = uploadImageToContentful(imgSrc)
+            const imgTitle = image.getAttribute('title')
+            image = await uploadImageToContentful(imgSrc, imgTitle)
             const body = document
                 .querySelector(".article .field-content").innerHTML.trim()
             let slug = url.split("/")[url.split("/")?.length - 1];
@@ -99,12 +122,14 @@ async function scrapeData(url) {
 
 // Function to send data to Contentful
 async function createNewEntry(data) {
-    const { title, slug, content } = data;
+    const { title, slug, content, image } = data;
     const payload = {
         fields: {
             title: {
                 "en-US": title,
             },
+            image: { "en-US": { "sys": { "id": "1qu3dkETGetSnyFyKRwXpB", "type": "Link", "linkType": "Asset" } } },
+
             slug: {
                 "en-US": slug,
             },
@@ -115,10 +140,10 @@ async function createNewEntry(data) {
     };
     try {
         // Create a new entry in Contentful with scraped data
-        client.getSpace(contentfulSpaceId).then((space) => {
+        await client.getSpace(contentfulSpaceId).then((space) => {
             space.getEnvironment("master").then((env) => {
-                env.createEntry("blogPost", payload).then((entry) => {
-                    entry.publish();
+                env.createEntry("pageNews", payload).then(async (entry) => {
+                    await entry.publish();
                     console.log("Entry created and published on Contentful.==>>>", entry);
                 });
             });
@@ -130,15 +155,14 @@ async function createNewEntry(data) {
 
 // Loop through the array of URLs and scrape data from each one
 const urls = [
-    "https://security.gallagher.com/en-NZ/News/Putting-people-at-the-heart-of-emergency-response-tools-Gallagher-Security-recognized-with-double-win-in-2023-Secure-Campus-Awards",
+    "https://security.gallagher.com/en-NZ/News/Industry-experts-gather-at-Gallagher-Securitys-free-National-User-Group-event-in-Melbourne",
 ];
 
 async function scrapeAllPages() {
     for (const url of urls) {
         const scrappedData = await scrapeData(url);
-        console.log("final scraped data", scrappedData)
-        // await createNewEntry(scrappedData);
-        // await new Promise((resolve) => setTimeout(resolve, 1000));
+        await createNewEntry(scrappedData);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 }
 
