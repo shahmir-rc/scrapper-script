@@ -2,26 +2,19 @@ const { JSDOM } = require("jsdom");
 const axios = require("axios");
 const { richTextFromMarkdown } = require("@contentful/rich-text-from-markdown");
 var TurndownService = require("turndown");
+const fs = require("fs");
 
 const { client } = require("./lib/client.js");
 const { contentfulSpaceId } = require("./constant.js");
 
 var turndownService = new TurndownService();
 
-// Function to upload an image to Contentful and get its URL
-async function uploadImageToContentful(src, title) {
-    console.log("title here from src", title)
-    let imgTitle = src.split("/")
-    imgTitle = imgTitle[imgTitle.length - 1]
-    imgTitle = imgTitle.split("?")[0]
-    const type = imgTitle.split(".")[1]
-    const imageUrl = `https://security.gallagher.com${src}`
 
+async function uploadImageToContentful(imgTitle, filePath, title, type) {
+    let assetId = null
+    const readedPath = fs.createReadStream(filePath)
 
-
-    console.log("image title here", imgTitle)
-    console.log("image type here", type)
-    console.log("image url", imageUrl)
+    // readedPath.on('end', async () => {
     try {
         const space = await client.getSpace(contentfulSpaceId);
         const environment = await space.getEnvironment('master');
@@ -31,42 +24,67 @@ async function uploadImageToContentful(src, title) {
             'fields.title[match]': title,
         });
 
-        console.log("existing assets here", existingAssets)
-
         if (existingAssets && existingAssets.items && existingAssets.items.length > 0) {
             // If an asset with the same title exists, return its ID
+            console.log("existing found")
             return existingAssets.items[0].sys.id;
         }
 
-        console.log("not found image")
+        console.log("existing not found")
 
-        // Create an asset from the external image URL
-        const asset = await environment.createAsset({
+        await environment.createAssetFromFiles({ // this first posts the asset to 'uploads', then finally posts the asset to 'assets'
             fields: {
                 title: {
-                    'en-US': title,
+                    'en-US': title
+                },
+                description: {
+                    'en-US': title
                 },
                 file: {
                     'en-US': {
-                        fileName: imgTitle, // Adjust the file name as needed
-                        contentType: `image/${type}`, // Adjust the content type as needed
-                        upload: imageUrl,
-                    },
-                },
-            },
-        });
-
-        await asset.processForLocale('en-US');
-        await asset.processForAllLocales();
-
-        // Publish the asset
-        await asset.publish();
-        console.log("asset here", asset)
-        // Return the id of the uploaded asset
-        return asset.sys.id;
+                        contentType: `image/${type}`,
+                        fileName: title,
+                        file: readedPath
+                    }
+                }
+            }
+        }).then((asset) => {
+            return asset.processForAllLocales()
+                .then((asset) => {
+                    asset.publish()
+                    assetId = asset.sys.id
+                }
+                ).catch((er) => console.log(er))
+        }).catch((er) => console.log(er))
     } catch (error) {
         console.error('Error uploading image to Contentful:', error);
     }
+    // });
+    return assetId
+
+}
+
+async function downloadImage(imageUrl, destinationPath) {
+    const response = await axios.get(imageUrl, { responseType: "stream" });
+    response.data.pipe(fs.createWriteStream(destinationPath));
+}
+
+// Function to upload an image to Contentful and get its URL
+async function preparingToDownload(src, title) {
+    let assetId = null
+    let imgTitle = src.split("/")
+    imgTitle = imgTitle[imgTitle.length - 1]
+    imgTitle = imgTitle.split("?")[0]
+    const type = imgTitle.split(".")[1]
+    const imageUrl = `https://security.gallagher.com${src}`
+    const localImagePath = `./images/${imgTitle}`
+
+    await downloadImage(imageUrl, localImagePath).then(async () => {
+
+        assetId = await uploadImageToContentful(imgTitle, localImagePath, title, type)
+    })
+
+    return assetId
 }
 
 // Function to scrape data from a single URL
@@ -86,17 +104,19 @@ async function scrapeData(url) {
             const date = document
                 .querySelector(".article .field-dateposted")
                 .textContent.trim();
-            let image = document.querySelector(".article .field-image img")
-            const imgSrc = image.getAttribute('src')
-            const imgTitle = image.getAttribute('title')
-            image = await uploadImageToContentful(imgSrc, imgTitle)
             const body = document
                 .querySelector(".article .field-content").innerHTML.trim()
             let slug = url.split("/")[url.split("/")?.length - 1];
+            let image = document.querySelector(".article .field-image img")
+            const imgSrc = image.getAttribute('src')
+            const imgTitle = image.getAttribute('title')
 
-            // converting to markdown
-            var markdownBody = turndownService.turndown(body);
-            const contentDoc = await richTextFromMarkdown(markdownBody);
+            image = await preparingToDownload(imgSrc, imgTitle)
+
+            const markdownBody = turndownService.turndown(body)
+
+            const contentDoc = await richTextFromMarkdown(markdownBody)
+
 
             // Print or process the extracted data
             console.log("URL:", url);
@@ -128,7 +148,7 @@ async function createNewEntry(data) {
             title: {
                 "en-US": title,
             },
-            image: { "en-US": { "sys": { "id": "1qu3dkETGetSnyFyKRwXpB", "type": "Link", "linkType": "Asset" } } },
+            image: { "en-US": { "sys": { "id": image, "type": "Link", "linkType": "Asset" } } },
 
             slug: {
                 "en-US": slug,
@@ -155,16 +175,18 @@ async function createNewEntry(data) {
 
 // Loop through the array of URLs and scrape data from each one
 const urls = [
-    "https://security.gallagher.com/en-NZ/News/Industry-experts-gather-at-Gallagher-Securitys-free-National-User-Group-event-in-Melbourne",
+    // "https://security.gallagher.com/en-NZ/News/Partnerships-cybersecurity-and-big-announcements-on-display-from-Gallagher-Security-at-GSX-2023",
+    "https://security.gallagher.com/en-NZ/News/Gallagher-Security-India-Celebrates-85th-Anniversary-with-Prestigious-Event-at-the-New-Zealand-High-Commission",
+    "https://security.gallagher.com/en-NZ/News/Gallagher-Security-and-Prosegur-Security-announce-partnership-to-drive-innovation-and-growth"
 ];
 
 async function scrapeAllPages() {
     for (const url of urls) {
-        const scrappedData = await scrapeData(url);
-        await createNewEntry(scrappedData);
+        await scrapeData(url).then(async (scrappedData) => {
+            await createNewEntry(scrappedData);
+        });
         await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 }
 
-// Start scraping all pages
 scrapeAllPages();
