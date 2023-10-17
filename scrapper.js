@@ -6,6 +6,7 @@ const { contentfulSpaceId } = require("./constant.js");
 const { URL } = require("url");
 var TurndownService = require("turndown");
 var turndownService = new TurndownService();
+const { urls, selectors, content_type_id, domains } = require("./config");
 
 const contentTypeMapping = {
   jpg: "image/jpeg",
@@ -28,7 +29,7 @@ const createNewAsset = async ({ url, title }) => {
       environment.createAsset({
         fields: {
           title: {
-            "en-US": title,
+            "en-US": title ?? "",
           },
           file: {
             "en-US": {
@@ -51,7 +52,6 @@ const createNewAsset = async ({ url, title }) => {
 // Function to scrape data from a single URL
 function scrapeData(url) {
   return new Promise(async (resolve, reject) => {
-    let scrapedData = {};
     try {
       const response = await axios.get(url);
       if (response.status === 200) {
@@ -59,40 +59,45 @@ function scrapeData(url) {
         const dom = new JSDOM(html);
         const document = dom.window.document;
 
-        // Extract data from the page using DOM methods
-        const title = document
-          .querySelector(".article .field-article-title")
-          .textContent.trim();
-        const date = document
-          .querySelector(".article .field-dateposted")
-          .textContent.trim();
-        let imageEl = document.querySelector(".article .field-image img");
-        const imgSrc = imageEl.getAttribute("src");
-        const imgTitle = imageEl.getAttribute("title");
+        // Extract data from the page using DOM methods and provided selectors
+        let data = {};
+        data.slug = url.split("/").pop();
+        // Optional selectors
+        if (selectors.title) {
+          data.title = document
+            .querySelector(selectors.title)
+            .textContent.trim();
+        }
 
-        const body = document
-          .querySelector(".article .field-content")
-          .innerHTML.trim();
-        let slug = url.split("/")[url.split("/")?.length - 1];
-
-        // converting to markdown
-        var markdownBody = turndownService.turndown(body);
-        console.log(`Data scrapped successfully! : Page-Slug : ${slug}`);
+        if (selectors.date) {
+          data.date = document.querySelector(selectors.date).textContent.trim();
+        }
+        let imgSrc = "";
+        let imgTitle = "";
+        if (selectors.image) {
+          const imageEl = document.querySelector(selectors.image);
+          imgSrc = imageEl.getAttribute("src");
+          imgTitle = imageEl.getAttribute("title");
+        }
+        let markdownBody = "";
+        if (selectors.content) {
+          const body = document
+            .querySelector(selectors.content)
+            .innerHTML.trim();
+          markdownBody = turndownService.turndown(body);
+        }
         Promise.all([
-          richTextFromMarkdown(markdownBody),
+          richTextFromMarkdown(selectors.content ? markdownBody : ``),
           createNewAsset({
-            url: `https://security.gallagher.com${imgSrc}`,
-            title: imgTitle ?? "",
+            url: `${domains?.image_base_path}${imgSrc}`,
+            title: imgTitle ?? "Untitled",
           }),
         ]).then((values) => {
-          scrapedData = {
-            title: title,
-            date: date,
-            content: values[0],
-            image: values[1],
-            slug,
-          };
-          resolve(scrapedData);
+          resolve({
+            ...data,
+            ...(selectors.content && { content: values[0] }),
+            ...(selectors.image && { image: values[1] }),
+          });
         });
       } else {
         reject(new Error(`Failed to fetch ${url}`));
@@ -110,18 +115,18 @@ async function createNewEntry(data) {
   const payload = {
     fields: {
       title: {
-        "en-US": title,
+        "en-US": title ?? "",
       },
       slug: {
-        "en-US": slug,
+        "en-US": slug ?? "",
       },
       content: {
-        "en-US": content,
+        "en-US": content ?? "",
       },
       image: {
         "en-US": {
           sys: {
-            id: image.sys.id,
+            id: image?.sys?.id,
             type: "Link",
             linkType: "Asset",
           },
@@ -133,7 +138,7 @@ async function createNewEntry(data) {
     // Create a new entry in Contentful with scraped data
     return client.getSpace(contentfulSpaceId).then(async (space) => {
       return space.getEnvironment("master").then(async (env) => {
-        return env.createEntry("pageNews", payload).then(async (entry) => {
+        return env.createEntry(content_type_id, payload).then(async (entry) => {
           await entry.publish();
           return entry;
         });
@@ -145,16 +150,13 @@ async function createNewEntry(data) {
 }
 
 // Loop through the array of URLs and scrape data from each one
-const urls = [
-  "https://security.gallagher.com/en-NZ/News/Industry-experts-gather-at-Gallagher-Securitys-free-National-User-Group-event-in-Melbourne",
-];
 
 async function scrapeAllPages() {
   for (const url of urls) {
     scrapeData(url).then(async (data) => {
       createNewEntry(data).then(async (entry) => {
         console.log(
-          `Page ${entry?.fields?.slug["en-US"]} Created Successfully!`
+          `Page: ${entry?.fields?.slug["en-US"]} Created Successfully!`
         );
         await new Promise((resolve) => setTimeout(resolve, 1000));
       });
