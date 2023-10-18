@@ -6,7 +6,8 @@ const { contentfulSpaceId } = require("./constant.js");
 const { URL } = require("url");
 var TurndownService = require("turndown");
 var turndownService = new TurndownService();
-const { urls, selectors, content_type_id, domains } = require("./config");
+const { urls, fields, content_type_id, domains } = require("./config");
+const { getFieldContent } = require("./field-types.js");
 
 const contentTypeMapping = {
   jpg: "image/jpeg",
@@ -60,50 +61,86 @@ function scrapeData(url) {
         const document = dom.window.document;
 
         // Extract data from the page using DOM methods and provided selectors
-        let data = {};
-        data.slug = url.split("/").pop();
-        // Optional selectors
-        if (selectors.title) {
-          data.title = document
-            .querySelector(selectors.title)
-            .textContent.trim();
-        }
+        let data = [];
 
-        if (selectors.date) {
-          data.date = document.querySelector(selectors.date).textContent.trim();
-        }
         let imgSrc = "";
         let imgTitle = "";
-        if (selectors.image) {
-          const imageEl = document.querySelector(selectors.image);
-          imgSrc = imageEl.getAttribute("src");
-          imgTitle = imageEl.getAttribute("title");
-        }
         let markdownBody = "";
-        if (selectors.content) {
-          const body = document
-            .querySelector(selectors.content)
-            .innerHTML.trim();
-          markdownBody = turndownService.turndown(body);
+
+        data.push({
+          field: "slug",
+          fieldType: "text",
+          content: url.split("/").pop(),
+        });
+
+        fields.map((_field) => {
+          if (_field?.required) {
+            if (_field.field === "content") {
+              const body = document
+                .querySelector(_field.selector)
+                .innerHTML.trim();
+              markdownBody = turndownService.turndown(body??_field?.defaultValue);
+              data.push({
+                field: _field.field,
+                fieldType: _field.fieldType,
+              });
+              return;
+            }
+            if (_field.field === "image") {
+              const imageEl = document.querySelector(_field.selector);
+              imgSrc = imageEl.getAttribute("src")??_field?.defaultValue;
+              imgTitle = imageEl.getAttribute("title");
+              data.push({
+                field: _field.field,
+                fieldType: _field.fieldType,
+              });
+              return;
+            }
+            let content = document
+              .querySelector(_field.selector)
+              .textContent.trim();
+
+            data.push({
+              field: _field.field,
+              content:content??_field?.defaultValue,
+              fieldType: _field.fieldType,
+            });
+          } else return;
+        });
+
+        let promises = [];
+        if (markdownBody) {
+          promises.push(richTextFromMarkdown(markdownBody));
         }
-        Promise.all([
-          richTextFromMarkdown(selectors.content ? markdownBody : ``),
-          createNewAsset({
-            url: `${domains?.image_base_path}${imgSrc}`,
-            title: imgTitle ?? "Untitled",
-          }),
-        ]).then((values) => {
-          resolve({
-            ...data,
-            ...(selectors.content && { content: values[0] }),
-            ...(selectors.image && { image: values[1] }),
+        if (imgSrc) {
+          promises.push(
+            createNewAsset({
+              url: `${domains?.image_base_path}${imgSrc}`,
+              title: imgTitle ?? "Untitled",
+            })
+          );
+        }
+
+        Promise.all([...promises]).then((values) => {
+          let updatedData = data.map((item) => {
+            if (!!markdownBody && item.field === "content") {
+              return { ...item, content: values[0] };
+            }
+            if (!!imgSrc && item.field === "image") {
+              return {
+                ...item,
+                content: !!markdownBody ? values[1] : values[0],
+              };
+            }
+            return item;
           });
+
+          resolve(updatedData);
         });
       } else {
         reject(new Error(`Failed to fetch ${url}`));
       }
     } catch (error) {
-      reject(new Error(`Failed to fetch:  ${error.message}`));
       console.error(`Error while scraping ${url}:`, error.message);
     }
   });
@@ -111,34 +148,18 @@ function scrapeData(url) {
 
 // Function to send data to Contentful
 async function createNewEntry(data) {
-  const { title, slug, content, image } = data;
-  const payload = {
-    fields: {
-      title: {
-        "en-US": title ?? "",
-      },
-      slug: {
-        "en-US": slug ?? "",
-      },
-      content: {
-        "en-US": content ?? "",
-      },
-      image: {
-        "en-US": {
-          sys: {
-            id: image?.sys?.id,
-            type: "Link",
-            linkType: "Asset",
-          },
-        },
-      },
-    },
-  };
+
+  
+  let fields = {};
+  data.map((_field) => {
+    fields[_field?.field] = getFieldContent(_field);
+  });
+  
   try {
     // Create a new entry in Contentful with scraped data
     return client.getSpace(contentfulSpaceId).then(async (space) => {
       return space.getEnvironment("master").then(async (env) => {
-        return env.createEntry(content_type_id, payload).then(async (entry) => {
+        return env.createEntry(content_type_id, {fields}).then(async (entry) => {
           await entry.publish();
           return entry;
         });
