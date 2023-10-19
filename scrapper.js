@@ -6,8 +6,15 @@ const { contentfulSpaceId } = require("./constant.js");
 const { URL } = require("url");
 var TurndownService = require("turndown");
 var turndownService = new TurndownService();
-const { urls, fields, content_type_id, domains } = require("./config");
-const { getFieldContent } = require("./field-types.js");
+const {
+  urls,
+  fields,
+  content_type_id,
+  contentType,
+  domains,
+} = require("./config");
+const { getFieldContent, getContentTypeField } = require("./field-types.js");
+const fs = require("fs");
 
 const contentTypeMapping = {
   jpg: "image/jpeg",
@@ -16,8 +23,21 @@ const contentTypeMapping = {
   gif: "image/gif",
   webp: "image/webp",
 };
-const createNewAsset = async ({ url, title }) => {
-  const urlObject = new URL(url);
+function logError(errorMsg) {
+  fs.appendFile(
+    "error.log",
+    `${new Date().toLocaleString()}: ${errorMsg}\n`,
+    (err) => {
+      if (err) throw err;
+      console.error("===-==-=-=>>>error message", errorMsg);
+    }
+  );
+}
+// Clear the error.log file at the beginning
+fs.writeFileSync("error.log", "");
+const createNewAsset = async ({ pageURL, imageURL, title }) => {
+  console.log("Uploading media...");
+  const urlObject = new URL(imageURL);
   const fileName = urlObject.pathname.split("/").pop();
   const fileExtension = fileName.split(".").pop().toLowerCase();
   const contentType =
@@ -36,7 +56,7 @@ const createNewAsset = async ({ url, title }) => {
             "en-US": {
               contentType,
               fileName,
-              upload: url,
+              upload: imageURL,
             },
           },
         },
@@ -48,10 +68,15 @@ const createNewAsset = async ({ url, title }) => {
       console.log(`Image: ${title}. Uploaded to Contentful successfully!`);
       return asset;
     })
-    .catch(console.error);
+    .catch((error) => {
+      const errorMessage = `Failed to upload media/image to contentful. Error: Invalid URL. ${error.message}. Page Ref: ${pageURL} `;
+      logError(errorMessage);
+      reject(errorMessage);
+    });
 };
 // Function to scrape data from a single URL
 function scrapeData(url) {
+  console.log("Scrapping page content...");
   return new Promise(async (resolve, reject) => {
     try {
       const response = await axios.get(url);
@@ -69,26 +94,28 @@ function scrapeData(url) {
 
         data.push({
           field: "slug",
-          fieldType: "text",
+          fieldType: "Symbol",
           content: url.split("/").pop(),
         });
 
         fields.map((_field) => {
           if (_field?.required) {
-            if (_field.field === "content") {
+            if (_field.fieldType.toLowerCase() === "rich text") {
               const body = document
                 .querySelector(_field.selector)
                 .innerHTML.trim();
-              markdownBody = turndownService.turndown(body??_field?.defaultValue);
+              markdownBody = turndownService.turndown(
+                body ?? _field?.defaultValue
+              );
               data.push({
                 field: _field.field,
                 fieldType: _field.fieldType,
               });
               return;
             }
-            if (_field.field === "image") {
+            if (_field.fieldType.toLowerCase() === "media") {
               const imageEl = document.querySelector(_field.selector);
-              imgSrc = imageEl.getAttribute("src")??_field?.defaultValue;
+              imgSrc = imageEl.getAttribute("src") ?? _field?.defaultValue;
               imgTitle = imageEl.getAttribute("title");
               data.push({
                 field: _field.field,
@@ -96,13 +123,14 @@ function scrapeData(url) {
               });
               return;
             }
+
             let content = document
               .querySelector(_field.selector)
               .textContent.trim();
 
             data.push({
               field: _field.field,
-              content:content??_field?.defaultValue,
+              content: content ?? _field?.defaultValue,
               fieldType: _field.fieldType,
             });
           } else return;
@@ -115,7 +143,8 @@ function scrapeData(url) {
         if (imgSrc) {
           promises.push(
             createNewAsset({
-              url: `${domains?.image_base_path}${imgSrc}`,
+              pageURL: url,
+              imageURL: `${domains?.image_base_path}${imgSrc}`,
               title: imgTitle ?? "Untitled",
             })
           );
@@ -138,35 +167,105 @@ function scrapeData(url) {
           resolve(updatedData);
         });
       } else {
-        reject(new Error(`Failed to fetch ${url}`));
+        const errorMessage = `Failed to scrape page content. Error: Invalid URL. 404. Page Ref: ${url} `;
+        logError(errorMessage);
+        reject(errorMessage);
       }
     } catch (error) {
-      console.error(`Error while scraping ${url}:`, error.message);
+      const errorMessage = `Failed to scrape page content. Error: Invalid URL. ${error.message}. Page Ref: ${url} `;
+      logError(errorMessage);
+      reject(errorMessage);
     }
   });
 }
-
 // Function to send data to Contentful
-async function createNewEntry(data) {
-
-  
+async function createNewEntry({ pageURL, contentTypeID, data }) {
   let fields = {};
   data.map((_field) => {
     fields[_field?.field] = getFieldContent(_field);
   });
-  
+  // console.log(
+  //   "Creating New Entry",
+  //   "Content Type id:",
+  //   contentTypeID,
+  //   "Fields:",
+  //   fields
+  // );
+
   try {
     // Create a new entry in Contentful with scraped data
     return client.getSpace(contentfulSpaceId).then(async (space) => {
       return space.getEnvironment("master").then(async (env) => {
-        return env.createEntry(content_type_id, {fields}).then(async (entry) => {
-          await entry.publish();
-          return entry;
-        });
+        return env
+          .createEntry(contentTypeID, { fields })
+          .then(async (entry) => {
+            await entry.publish();
+            return entry;
+          })
+          .catch((error) => {
+            const errorMessage = `Failed to create new entry on Contentful. Error: ${
+              error?.message ?? ""
+            }. Status: ${error?.status ?? ""}. Status Text: ${
+              error?.statusText ?? ""
+            }. Page Ref:${pageURL} `;
+            logError(errorMessage);
+          });
       });
     });
   } catch (error) {
-    console.error("Error creating entry on Contentful:", error);
+    const errorMessage = `Failed to create new entry on Contentful. Error: ${
+      error?.message ?? ""
+    }. Page Ref:${pageURL} `;
+    logError(errorMessage);
+  }
+}
+
+async function createContentType({ pageURL, data }) {
+  console.log("Create new content...");
+  let fields = data.map((_field) => getContentTypeField(_field));
+  console.log("Content model fields=-=-=-=-", fields);
+
+  try {
+    // Create a new content model.
+    return client.getSpace(contentfulSpaceId).then(async (space) => {
+      return space.getEnvironment("master").then(async (env) => {
+        return env
+          .createContentTypeWithId(contentType?.contentTypeId, {
+            name: contentType?.contentTypeName,
+            fields,
+          })
+          .then(async (contentType) => {
+            contentType.publish().then((_contentType) => {
+              createNewEntry({
+                pageURL,
+                contentTypeID: _contentType?.sys?.id,
+                data,
+              })
+                .then(async (entry) => {
+                  if (entry?.fields?.slug["en-US"]) {
+                    console.log(
+                      `Page: ${entry?.fields?.slug["en-US"]} Created Successfully!`
+                    );
+                  }
+                  await new Promise((resolve) => setTimeout(resolve, 1000));
+                })
+                .catch((err) => {});
+            });
+          })
+          .catch((error) => {
+            const errorMessage = `Failed to create content type. Error: ${
+              error?.message ?? ""
+            }. Page Ref:${pageURL} `;
+            console.log("-==-=-=-=errorMessage", errorMessage);
+            // logError(errorMessage);
+          });
+      });
+    });
+  } catch (error) {
+    const errorMessage = `Failed to create new entry on Contentful. Error: ${
+      error?.message ?? ""
+    }. Page Ref:${pageURL} `;
+    logError(errorMessage);
   }
 }
 
@@ -174,14 +273,36 @@ async function createNewEntry(data) {
 
 async function scrapeAllPages() {
   for (const url of urls) {
-    scrapeData(url).then(async (data) => {
-      createNewEntry(data).then(async (entry) => {
-        console.log(
-          `Page: ${entry?.fields?.slug["en-US"]} Created Successfully!`
-        );
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      });
-    });
+    scrapeData(url)
+      .then(async (data) => {
+        client
+          .getSpace(contentfulSpaceId)
+          .then((space) => space.getEnvironment("master"))
+          .then((environment) =>
+            environment.getContentType(contentType?.contentTypeId)
+          )
+          .then((contentType) => {
+            createNewEntry({
+              pageURL: url,
+              contentTypeID: contentType?.sys.id,
+              data,
+            })
+              .then(async (entry) => {
+                if (entry?.fields?.slug["en-US"]) {
+                  console.log(
+                    `Page: ${entry?.fields?.slug["en-US"]} Created Successfully!`
+                  );
+                }
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+              })
+              .catch((err) => {});
+          })
+          .catch((err) => {
+            console.log("ContentType not found!");
+            createContentType({ pageURL: url, data }).then((res) => {});
+          });
+      })
+      .catch((err) => {});
   }
 }
 
