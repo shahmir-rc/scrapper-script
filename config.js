@@ -45,7 +45,7 @@ module.exports = {
   ],
   contentType:{
     contentTypeName:'New random type',
-    contentTypeId:'newRandomType',
+    contentTypeId:'newRandomType', 
   },
   domains: {
     image_base_path: "https://security.gallagher.com", // Media base path

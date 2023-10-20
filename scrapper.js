@@ -6,15 +6,10 @@ const { contentfulSpaceId } = require("./constant.js");
 const { URL } = require("url");
 var TurndownService = require("turndown");
 var turndownService = new TurndownService();
-const {
-  urls,
-  fields,
-  content_type_id,
-  contentType,
-  domains,
-} = require("./config");
+const { urls, fields, contentType, domains } = require("./config");
 const { getFieldContent, getContentTypeField } = require("./field-types.js");
 const fs = require("fs");
+const { consoleSuccess, consoleInfo } = require("./utils/helpers.js");
 
 const contentTypeMapping = {
   jpg: "image/jpeg",
@@ -29,14 +24,14 @@ function logError(errorMsg) {
     `${new Date().toLocaleString()}: ${errorMsg}\n`,
     (err) => {
       if (err) throw err;
-      console.error("===-==-=-=>>>error message", errorMsg);
+      console.error(">>>Error message:", errorMsg);
     }
   );
 }
 // Clear the error.log file at the beginning
 fs.writeFileSync("error.log", "");
 const createNewAsset = async ({ pageURL, imageURL, title }) => {
-  console.log("Uploading media...");
+  consoleInfo("Uploading media...");
   const urlObject = new URL(imageURL);
   const fileName = urlObject.pathname.split("/").pop();
   const fileExtension = fileName.split(".").pop().toLowerCase();
@@ -65,7 +60,7 @@ const createNewAsset = async ({ pageURL, imageURL, title }) => {
     .then((asset) => asset.processForAllLocales())
     .then((asset) => {
       asset.publish();
-      console.log(`Image: ${title}. Uploaded to Contentful successfully!`);
+      consoleSuccess(`Image: ${title}. Uploaded to Contentful successfully!`);
       return asset;
     })
     .catch((error) => {
@@ -76,7 +71,9 @@ const createNewAsset = async ({ pageURL, imageURL, title }) => {
 };
 // Function to scrape data from a single URL
 function scrapeData(url) {
-  console.log("Scrapping page content...");
+  consoleInfo(
+    `${new Date().toLocaleString()}: Scrapping '${url}' content...)`
+  );
   return new Promise(async (resolve, reject) => {
     try {
       const response = await axios.get(url);
@@ -184,13 +181,6 @@ async function createNewEntry({ pageURL, contentTypeID, data }) {
   data.map((_field) => {
     fields[_field?.field] = getFieldContent(_field);
   });
-  // console.log(
-  //   "Creating New Entry",
-  //   "Content Type id:",
-  //   contentTypeID,
-  //   "Fields:",
-  //   fields
-  // );
 
   try {
     // Create a new entry in Contentful with scraped data
@@ -221,7 +211,6 @@ async function createNewEntry({ pageURL, contentTypeID, data }) {
 }
 
 async function createContentType({ pageURL, data }) {
-  console.log("Create new content...");
   let fields = data.map((_field) => getContentTypeField(_field));
   console.log("Content model fields=-=-=-=-", fields);
 
@@ -243,8 +232,8 @@ async function createContentType({ pageURL, data }) {
               })
                 .then(async (entry) => {
                   if (entry?.fields?.slug["en-US"]) {
-                    console.log(
-                      `Page: ${entry?.fields?.slug["en-US"]} Created Successfully!`
+                    consoleSuccess(
+                      `New Entry: ${entry?.fields?.slug["en-US"]} Created Successfully!`
                     );
                   }
                   await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -257,7 +246,7 @@ async function createContentType({ pageURL, data }) {
               error?.message ?? ""
             }. Page Ref:${pageURL} `;
             console.log("-==-=-=-=errorMessage", errorMessage);
-            // logError(errorMessage);
+            logError(errorMessage);
           });
       });
     });
@@ -282,6 +271,15 @@ async function scrapeAllPages() {
             environment.getContentType(contentType?.contentTypeId)
           )
           .then((contentType) => {
+            consoleInfo(
+              `${new Date().toLocaleString()}: Content type with the ID '${
+                contentType?.sys.id
+              }' already exists.`
+            );
+            consoleInfo(
+              `${new Date().toLocaleString()}: Creating new entry...`
+            );
+
             createNewEntry({
               pageURL: url,
               contentTypeID: contentType?.sys.id,
@@ -289,8 +287,8 @@ async function scrapeAllPages() {
             })
               .then(async (entry) => {
                 if (entry?.fields?.slug["en-US"]) {
-                  console.log(
-                    `Page: ${entry?.fields?.slug["en-US"]} Created Successfully!`
+                  consoleSuccess(
+                    `New Entry: ${entry?.fields?.slug["en-US"]} Created Successfully!`
                   );
                 }
                 await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -298,8 +296,21 @@ async function scrapeAllPages() {
               .catch((err) => {});
           })
           .catch((err) => {
-            console.log("ContentType not found!");
-            createContentType({ pageURL: url, data }).then((res) => {});
+            consoleInfo(
+              `${new Date().toLocaleString()}: No content type with the ID '${
+                contentType?.contentTypeId
+              }' found.`
+            );
+            consoleInfo(
+              `${new Date().toLocaleString()}: Creating content type with ID '${
+                contentType?.contentTypeId
+              }'...`
+            );
+            createContentType({ pageURL: url, data }).then((res) =>
+              consoleSuccess(
+                `Content type with ID '${contentType?.contentTypeId} Created Successfully!`
+              )
+            );
           });
       })
       .catch((err) => {});
