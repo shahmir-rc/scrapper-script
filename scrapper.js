@@ -6,6 +6,10 @@ const { contentfulSpaceId } = require("./constant.js");
 const { URL } = require("url");
 var TurndownService = require("turndown");
 var turndownService = new TurndownService();
+const { urls, fields, contentType, domains } = require("./config");
+const { getFieldContent, getContentTypeField } = require("./field-types.js");
+const fs = require("fs");
+const { consoleSuccess, consoleInfo } = require("./utils/helpers.js");
 
 const contentTypeMapping = {
   jpg: "image/jpeg",
@@ -14,8 +18,21 @@ const contentTypeMapping = {
   gif: "image/gif",
   webp: "image/webp",
 };
-const createNewAsset = async ({ url, title }) => {
-  const urlObject = new URL(url);
+function logError(errorMsg) {
+  fs.appendFile(
+    "error.log",
+    `${new Date().toLocaleString()}: ${errorMsg}\n`,
+    (err) => {
+      if (err) throw err;
+      console.error(">>>Error message:", errorMsg);
+    }
+  );
+}
+// Clear the error.log file at the beginning
+fs.writeFileSync("error.log", "");
+const createNewAsset = async ({ pageURL, imageURL, title }) => {
+  consoleInfo("Uploading media...");
+  const urlObject = new URL(imageURL);
   const fileName = urlObject.pathname.split("/").pop();
   const fileExtension = fileName.split(".").pop().toLowerCase();
   const contentType =
@@ -28,13 +45,13 @@ const createNewAsset = async ({ url, title }) => {
       environment.createAsset({
         fields: {
           title: {
-            "en-US": title,
+            "en-US": title ?? "",
           },
           file: {
             "en-US": {
               contentType,
               fileName,
-              upload: url,
+              upload: imageURL,
             },
           },
         },
@@ -43,15 +60,21 @@ const createNewAsset = async ({ url, title }) => {
     .then((asset) => asset.processForAllLocales())
     .then((asset) => {
       asset.publish();
-      console.log(`Image: ${title}. Uploaded to Contentful successfully!`);
+      consoleSuccess(`Image: ${title}. Uploaded to Contentful successfully!`);
       return asset;
     })
-    .catch(console.error);
+    .catch((error) => {
+      const errorMessage = `Failed to upload media/image to contentful. Error: Invalid URL. ${error.message}. Page Ref: ${pageURL} `;
+      logError(errorMessage);
+      reject(errorMessage);
+    });
 };
 // Function to scrape data from a single URL
 function scrapeData(url) {
+  consoleInfo(
+    `${new Date().toLocaleString()}: Scrapping '${url}' content...)`
+  );
   return new Promise(async (resolve, reject) => {
-    let scrapedData = {};
     try {
       const response = await axios.get(url);
       if (response.status === 200) {
@@ -59,106 +82,238 @@ function scrapeData(url) {
         const dom = new JSDOM(html);
         const document = dom.window.document;
 
-        // Extract data from the page using DOM methods
-        const title = document
-          .querySelector(".article .field-article-title")
-          .textContent.trim();
-        const date = document
-          .querySelector(".article .field-dateposted")
-          .textContent.trim();
-        let imageEl = document.querySelector(".article .field-image img");
-        const imgSrc = imageEl.getAttribute("src");
-        const imgTitle = imageEl.getAttribute("title");
+        // Extract data from the page using DOM methods and provided selectors
+        let data = [];
 
-        const body = document
-          .querySelector(".article .field-content")
-          .innerHTML.trim();
-        let slug = url.split("/")[url.split("/")?.length - 1];
+        let imgSrc = "";
+        let imgTitle = "";
+        let markdownBody = "";
 
-        // converting to markdown
-        var markdownBody = turndownService.turndown(body);
-        console.log(`Data scrapped successfully! : Page-Slug : ${slug}`);
-        Promise.all([
-          richTextFromMarkdown(markdownBody),
-          createNewAsset({
-            url: `https://security.gallagher.com${imgSrc}`,
-            title: imgTitle ?? "",
-          }),
-        ]).then((values) => {
-          scrapedData = {
-            title: title,
-            date: date,
-            content: values[0],
-            image: values[1],
-            slug,
-          };
-          resolve(scrapedData);
+        data.push({
+          field: "slug",
+          fieldType: "Symbol",
+          content: url.split("/").pop(),
+        });
+
+        fields.map((_field) => {
+          if (_field?.required) {
+            if (_field.fieldType.toLowerCase() === "rich text") {
+              const body = document
+                .querySelector(_field.selector)
+                .innerHTML.trim();
+              markdownBody = turndownService.turndown(
+                body ?? _field?.defaultValue
+              );
+              data.push({
+                field: _field.field,
+                fieldType: _field.fieldType,
+              });
+              return;
+            }
+            if (_field.fieldType.toLowerCase() === "media") {
+              const imageEl = document.querySelector(_field.selector);
+              imgSrc = imageEl.getAttribute("src") ?? _field?.defaultValue;
+              imgTitle = imageEl.getAttribute("title");
+              data.push({
+                field: _field.field,
+                fieldType: _field.fieldType,
+              });
+              return;
+            }
+
+            let content = document
+              .querySelector(_field.selector)
+              .textContent.trim();
+
+            data.push({
+              field: _field.field,
+              content: content ?? _field?.defaultValue,
+              fieldType: _field.fieldType,
+            });
+          } else return;
+        });
+
+        let promises = [];
+        if (markdownBody) {
+          promises.push(richTextFromMarkdown(markdownBody));
+        }
+        if (imgSrc) {
+          promises.push(
+            createNewAsset({
+              pageURL: url,
+              imageURL: `${domains?.image_base_path}${imgSrc}`,
+              title: imgTitle ?? "Untitled",
+            })
+          );
+        }
+
+        Promise.all([...promises]).then((values) => {
+          let updatedData = data.map((item) => {
+            if (!!markdownBody && item.field === "content") {
+              return { ...item, content: values[0] };
+            }
+            if (!!imgSrc && item.field === "image") {
+              return {
+                ...item,
+                content: !!markdownBody ? values[1] : values[0],
+              };
+            }
+            return item;
+          });
+
+          resolve(updatedData);
         });
       } else {
-        reject(new Error(`Failed to fetch ${url}`));
+        const errorMessage = `Failed to scrape page content. Error: Invalid URL. 404. Page Ref: ${url} `;
+        logError(errorMessage);
+        reject(errorMessage);
       }
     } catch (error) {
-      reject(new Error(`Failed to fetch:  ${error.message}`));
-      console.error(`Error while scraping ${url}:`, error.message);
+      const errorMessage = `Failed to scrape page content. Error: Invalid URL. ${error.message}. Page Ref: ${url} `;
+      logError(errorMessage);
+      reject(errorMessage);
     }
   });
 }
-
 // Function to send data to Contentful
-async function createNewEntry(data) {
-  const { title, slug, content, image } = data;
-  const payload = {
-    fields: {
-      title: {
-        "en-US": title,
-      },
-      slug: {
-        "en-US": slug,
-      },
-      content: {
-        "en-US": content,
-      },
-      image: {
-        "en-US": {
-          sys: {
-            id: image.sys.id,
-            type: "Link",
-            linkType: "Asset",
-          },
-        },
-      },
-    },
-  };
+async function createNewEntry({ pageURL, contentTypeID, data }) {
+  let fields = {};
+  data.map((_field) => {
+    fields[_field?.field] = getFieldContent(_field);
+  });
+
   try {
     // Create a new entry in Contentful with scraped data
     return client.getSpace(contentfulSpaceId).then(async (space) => {
       return space.getEnvironment("master").then(async (env) => {
-        return env.createEntry("pageNews", payload).then(async (entry) => {
-          await entry.publish();
-          return entry;
-        });
+        return env
+          .createEntry(contentTypeID, { fields })
+          .then(async (entry) => {
+            await entry.publish();
+            return entry;
+          })
+          .catch((error) => {
+            const errorMessage = `Failed to create new entry on Contentful. Error: ${
+              error?.message ?? ""
+            }. Status: ${error?.status ?? ""}. Status Text: ${
+              error?.statusText ?? ""
+            }. Page Ref:${pageURL} `;
+            logError(errorMessage);
+          });
       });
     });
   } catch (error) {
-    console.error("Error creating entry on Contentful:", error);
+    const errorMessage = `Failed to create new entry on Contentful. Error: ${
+      error?.message ?? ""
+    }. Page Ref:${pageURL} `;
+    logError(errorMessage);
+  }
+}
+
+async function createContentType({ pageURL, data }) {
+  let fields = data.map((_field) => getContentTypeField(_field));
+  console.log("Content model fields=-=-=-=-", fields);
+
+  try {
+    // Create a new content model.
+    return client.getSpace(contentfulSpaceId).then(async (space) => {
+      return space.getEnvironment("master").then(async (env) => {
+        return env
+          .createContentTypeWithId(contentType?.contentTypeId, {
+            name: contentType?.contentTypeName,
+            fields,
+          })
+          .then(async (contentType) => {
+            contentType.publish().then((_contentType) => {
+              createNewEntry({
+                pageURL,
+                contentTypeID: _contentType?.sys?.id,
+                data,
+              })
+                .then(async (entry) => {
+                  if (entry?.fields?.slug["en-US"]) {
+                    consoleSuccess(
+                      `New Entry: ${entry?.fields?.slug["en-US"]} Created Successfully!`
+                    );
+                  }
+                  await new Promise((resolve) => setTimeout(resolve, 1000));
+                })
+                .catch((err) => {});
+            });
+          })
+          .catch((error) => {
+            const errorMessage = `Failed to create content type. Error: ${
+              error?.message ?? ""
+            }. Page Ref:${pageURL} `;
+            console.log("-==-=-=-=errorMessage", errorMessage);
+            logError(errorMessage);
+          });
+      });
+    });
+  } catch (error) {
+    const errorMessage = `Failed to create new entry on Contentful. Error: ${
+      error?.message ?? ""
+    }. Page Ref:${pageURL} `;
+    logError(errorMessage);
   }
 }
 
 // Loop through the array of URLs and scrape data from each one
-const urls = [
-  "https://security.gallagher.com/en-NZ/News/Industry-experts-gather-at-Gallagher-Securitys-free-National-User-Group-event-in-Melbourne",
-];
 
 async function scrapeAllPages() {
   for (const url of urls) {
-    scrapeData(url).then(async (data) => {
-      createNewEntry(data).then(async (entry) => {
-        console.log(
-          `Page ${entry?.fields?.slug["en-US"]} Created Successfully!`
-        );
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      });
-    });
+    scrapeData(url)
+      .then(async (data) => {
+        client
+          .getSpace(contentfulSpaceId)
+          .then((space) => space.getEnvironment("master"))
+          .then((environment) =>
+            environment.getContentType(contentType?.contentTypeId)
+          )
+          .then((contentType) => {
+            consoleInfo(
+              `${new Date().toLocaleString()}: Content type with the ID '${
+                contentType?.sys.id
+              }' already exists.`
+            );
+            consoleInfo(
+              `${new Date().toLocaleString()}: Creating new entry...`
+            );
+
+            createNewEntry({
+              pageURL: url,
+              contentTypeID: contentType?.sys.id,
+              data,
+            })
+              .then(async (entry) => {
+                if (entry?.fields?.slug["en-US"]) {
+                  consoleSuccess(
+                    `New Entry: ${entry?.fields?.slug["en-US"]} Created Successfully!`
+                  );
+                }
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+              })
+              .catch((err) => {});
+          })
+          .catch((err) => {
+            consoleInfo(
+              `${new Date().toLocaleString()}: No content type with the ID '${
+                contentType?.contentTypeId
+              }' found.`
+            );
+            consoleInfo(
+              `${new Date().toLocaleString()}: Creating content type with ID '${
+                contentType?.contentTypeId
+              }'...`
+            );
+            createContentType({ pageURL: url, data }).then((res) =>
+              consoleSuccess(
+                `Content type with ID '${contentType?.contentTypeId} Created Successfully!`
+              )
+            );
+          });
+      })
+      .catch((err) => {});
   }
 }
 
