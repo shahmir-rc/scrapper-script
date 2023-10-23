@@ -5,7 +5,7 @@ const ApplyConfig = async (groupedUrls) => {
     for (const ele of requiredContentTypes) {
         const urlsToScrap = groupedUrls[ele.slug];
         if (urlsToScrap.length > 0) {
-            await scrapeAllPages(urlsToScrap); // Wait for the scraping to complete
+            await scrapeAllPages(urlsToScrap,ele.fields,ele.contentType,ele.domains); // Wait for the scraping to complete
         } else {
             return
         }
