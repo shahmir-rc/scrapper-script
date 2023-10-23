@@ -1,8 +1,12 @@
 const axios = require("axios");
 const fs = require('fs');
 const xml2js = require('xml2js');
+const { requiredContentTypes } = require('./sitemap-config');
+const { scrapeAllPages } = require("./scrapper");
+const { ApplyConfig } = require("./apply-config-to-sitemap");
+const { groupCollapsed } = require("console");
 
-let url = "https://security.gallagher.com/sitemap.xml"
+let url = "https://www.gwagroup.com.au/sitemap.xml"
 const parser = new xml2js.Parser();
 const groupedUrls = {}
 let errors = 0
@@ -34,6 +38,7 @@ const fetchScrapedUrls = async () => {
                 if (requiredUrls) {
                     requiredUrls.forEach(element => {
                         if (containsLocale(element)) {
+                            console.log("contains")
                             if (element.includes("/en/")) {
                                 const parts = element.split('/');
                                 const partsLength = parts.length;
@@ -52,6 +57,7 @@ const fetchScrapedUrls = async () => {
                             return
                         }
                         if (!containsLocale(element)) {
+                            console.log("not contains")
                             const parts = element.split('/');
                             const partsLength = parts.length;
 
@@ -69,7 +75,8 @@ const fetchScrapedUrls = async () => {
                         }
 
                     });
-                    console.log("grouped urls here >>>", groupedUrls)
+                    // config settings configuring
+                    ApplyConfig(groupedUrls)
                 } else {
                     if (errors <= 2) {
                         console.log("Trying again ...")

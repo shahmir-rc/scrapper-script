@@ -193,19 +193,16 @@ async function createNewEntry({ pageURL, contentTypeID, data }) {
             return entry;
           })
           .catch((error) => {
-            const errorMessage = `Failed to create new entry on Contentful. Error: ${
-              error?.message ?? ""
-            }. Status: ${error?.status ?? ""}. Status Text: ${
-              error?.statusText ?? ""
-            }. Page Ref:${pageURL} `;
+            const errorMessage = `Failed to create new entry on Contentful. Error: ${error?.message ?? ""
+              }. Status: ${error?.status ?? ""}. Status Text: ${error?.statusText ?? ""
+              }. Page Ref:${pageURL} `;
             logError(errorMessage);
           });
       });
     });
   } catch (error) {
-    const errorMessage = `Failed to create new entry on Contentful. Error: ${
-      error?.message ?? ""
-    }. Page Ref:${pageURL} `;
+    const errorMessage = `Failed to create new entry on Contentful. Error: ${error?.message ?? ""
+      }. Page Ref:${pageURL} `;
     logError(errorMessage);
   }
 }
@@ -238,84 +235,80 @@ async function createContentType({ pageURL, data }) {
                   }
                   await new Promise((resolve) => setTimeout(resolve, 1000));
                 })
-                .catch((err) => {});
+                .catch((err) => { });
             });
           })
           .catch((error) => {
-            const errorMessage = `Failed to create content type. Error: ${
-              error?.message ?? ""
-            }. Page Ref:${pageURL} `;
+            const errorMessage = `Failed to create content type. Error: ${error?.message ?? ""
+              }. Page Ref:${pageURL} `;
             console.log("-==-=-=-=errorMessage", errorMessage);
             logError(errorMessage);
           });
       });
     });
   } catch (error) {
-    const errorMessage = `Failed to create new entry on Contentful. Error: ${
-      error?.message ?? ""
-    }. Page Ref:${pageURL} `;
+    const errorMessage = `Failed to create new entry on Contentful. Error: ${error?.message ?? ""
+      }. Page Ref:${pageURL} `;
     logError(errorMessage);
   }
 }
 
 // Loop through the array of URLs and scrape data from each one
 
-async function scrapeAllPages() {
-  for (const url of urls) {
-    scrapeData(url)
-      .then(async (data) => {
-        client
-          .getSpace(contentfulSpaceId)
-          .then((space) => space.getEnvironment("master"))
-          .then((environment) =>
-            environment.getContentType(contentType?.contentTypeId)
-          )
-          .then((contentType) => {
-            consoleInfo(
-              `${new Date().toLocaleString()}: Content type with the ID '${
-                contentType?.sys.id
-              }' already exists.`
-            );
-            consoleInfo(
-              `${new Date().toLocaleString()}: Creating new entry...`
-            );
+async function scrapeAllPages(passedUrls) {
+  for (const url of passedUrls) {
+    console.log("url passed",url)
+    // scrapeData(url)
+    //   .then(async (data) => {
+    //     client
+    //       .getSpace(contentfulSpaceId)
+    //       .then((space) => space.getEnvironment("master"))
+    //       .then((environment) =>
+    //         environment.getContentType(contentType?.contentTypeId)
+    //       )
+    //       .then((contentType) => {
+    //         consoleInfo(
+    //           `${new Date().toLocaleString()}: Content type with the ID '${contentType?.sys.id
+    //           }' already exists.`
+    //         );
+    //         consoleInfo(
+    //           `${new Date().toLocaleString()}: Creating new entry...`
+    //         );
 
-            createNewEntry({
-              pageURL: url,
-              contentTypeID: contentType?.sys.id,
-              data,
-            })
-              .then(async (entry) => {
-                if (entry?.fields?.slug["en-US"]) {
-                  consoleSuccess(
-                    `New Entry: ${entry?.fields?.slug["en-US"]} Created Successfully!`
-                  );
-                }
-                await new Promise((resolve) => setTimeout(resolve, 1000));
-              })
-              .catch((err) => {});
-          })
-          .catch((err) => {
-            consoleInfo(
-              `${new Date().toLocaleString()}: No content type with the ID '${
-                contentType?.contentTypeId
-              }' found.`
-            );
-            consoleInfo(
-              `${new Date().toLocaleString()}: Creating content type with ID '${
-                contentType?.contentTypeId
-              }'...`
-            );
-            createContentType({ pageURL: url, data }).then((res) =>
-              consoleSuccess(
-                `Content type with ID '${contentType?.contentTypeId} Created Successfully!`
-              )
-            );
-          });
-      })
-      .catch((err) => {});
+    //         createNewEntry({
+    //           pageURL: url,
+    //           contentTypeID: contentType?.sys.id,
+    //           data,
+    //         })
+    //           .then(async (entry) => {
+    //             if (entry?.fields?.slug["en-US"]) {
+    //               consoleSuccess(
+    //                 `New Entry: ${entry?.fields?.slug["en-US"]} Created Successfully!`
+    //               );
+    //             }
+    //             await new Promise((resolve) => setTimeout(resolve, 1000));
+    //           })
+    //           .catch((err) => { });
+    //       })
+    //       .catch((err) => {
+    //         consoleInfo(
+    //           `${new Date().toLocaleString()}: No content type with the ID '${contentType?.contentTypeId
+    //           }' found.`
+    //         );
+    //         consoleInfo(
+    //           `${new Date().toLocaleString()}: Creating content type with ID '${contentType?.contentTypeId
+    //           }'...`
+    //         );
+    //         createContentType({ pageURL: url, data }).then((res) =>
+    //           consoleSuccess(
+    //             `Content type with ID '${contentType?.contentTypeId} Created Successfully!`
+    //           )
+    //         );
+    //       });
+    //   })
+    //   .catch((err) => { });
   }
 }
 
 // Start scraping all pages
-scrapeAllPages();
+module.exports = { scrapeAllPages };
