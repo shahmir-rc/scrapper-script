@@ -1,9 +1,9 @@
-
 module.exports = {
   urls: [
     // "https://security.gallagher.com/en-NZ/News/Gallagher-Security-welcomes-New-Zealand-Foreign-Minister-to-South-African-Head-Ofdfsdfic",
     // "https://security.gallagher.com/en-NZ/News/Gallagher-Security-welcomes-New-Zealand-Foreign-Minister-to-South-African-Head-Offissdfsdfdsce",
-    "https://security.gallagher.com/en-NZ/News/GardaWorld-Partners-with-Gallagher-to-Create-a-State-of-the-Art-Security-Experience-at-Montreal-Headquarters",
+    // "https://security.gallagher.com/en-NZ/News/GardaWorld-Partners-with-Gallagher-to-Create-a-State-of-the-Art-Security-Experience-at-Montreal-Headquarters",
+    "https://security.gallagher.com/en-NZ/News/Safer-People-Better-Business", //Video template
     // Add more URLs as needed
   ],
   fields: [
@@ -14,6 +14,16 @@ module.exports = {
       fieldType: "Symbol",
       required: true,
       defaultValue: "Lorum Ipsum",
+    },
+    {
+      field: "video",
+      selector: ".article .component.video iframe",
+      elementAttributes: [{ attribute: "src" }, { attribute: "title" }],
+
+      fieldType: "Media",
+      required: true,
+      dynamicContent:true, // If the content is generated dynamically.
+      defaultValue: "",
     },
     // {
     //   field: "anyFieldName",
@@ -44,9 +54,9 @@ module.exports = {
       defaultValue: "",
     },
   ],
-  contentType:{
-    contentTypeName:'New random type',
-    contentTypeId:'newRandomType', 
+  contentType: {
+    contentTypeName: "New random type",
+    contentTypeId: "newRandomType",
   },
   domains: {
     image_base_path: "https://security.gallagher.com", // Media base path
