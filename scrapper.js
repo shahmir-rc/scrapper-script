@@ -30,6 +30,8 @@ function logError(errorMsg) {
 }
 // Clear the error.log file at the beginning
 fs.writeFileSync("error.log", "");
+
+
 const createNewAsset = async ({ pageURL, imageURL, title }) => {
   consoleInfo("Uploading media...");
   const urlObject = new URL(imageURL);
@@ -70,7 +72,7 @@ const createNewAsset = async ({ pageURL, imageURL, title }) => {
     });
 };
 // Function to scrape data from a single URL
-function scrapeData(url, fields, domains) {
+async function scrapeData(url, fields, domains) {
   consoleInfo(
     `${new Date().toLocaleString()}: Scrapping '${url}' content...)`
   );
@@ -211,33 +213,18 @@ async function createNewEntry({ pageURL, contentTypeID, data }) {
 
 async function createContentType({ pageURL, data, passedcontentType, passedfields }) {
   let fields = data.map((_field) => getContentTypeField(_field));
-  console.log("Content model fields=-=-=-=-", fields);
-
   try {
     // Create a new content model.
-    client.getSpace(contentfulSpaceId).then(async (space) => {
-      space.getEnvironment("master").then(async (env) => {
-        env
+    await client.getSpace(contentfulSpaceId).then(async (space) => {
+      await space.getEnvironment("master").then(async (env) => {
+        await env
           .createContentTypeWithId(passedcontentType?.contentTypeId, {
             name: passedcontentType?.contentTypeName,
             fields,
           })
           .then(async (contentType) => {
-            contentType.publish().then((_contentType) => {
-              createNewEntry({
-                pageURL,
-                contentTypeID: _contentType?.sys?.id,
-                data,
-              })
-                .then(async (entry) => {
-                  if (entry?.fields?.slug["en-US"]) {
-                    consoleSuccess(
-                      `New Entry: ${entry?.fields?.slug["en-US"]} Created Successfully!`
-                    );
-                  }
-                  await new Promise((resolve) => setTimeout(resolve, 700));
-                })
-                .catch((err) => { });
+            await contentType.publish().then((_contentType) => {
+              console.log("created content tyepe", _contentType?.sys?.id)
             });
           })
           .catch((error) => {
@@ -249,7 +236,7 @@ async function createContentType({ pageURL, data, passedcontentType, passedfield
       });
     });
   } catch (error) {
-    const errorMessage = `Failed to create new entry on Contentful. Error: ${error?.message ?? ""
+    const errorMessage = `Failed to create new content model on Contentful. Error: ${error?.message ?? ""
       }. Page Ref:${pageURL} `;
     logError(errorMessage);
   }
@@ -258,87 +245,29 @@ async function createContentType({ pageURL, data, passedcontentType, passedfield
 // Loop through the array of URLs and scrape data from each one
 
 async function scrapeAllPages(passedUrls, passedfields, passedcontentType, passeddomains, passedSlug) {
-  const checkedUrls = []
+  // const checkedUrls = []
   for (const url of passedUrls) {
     scrapeData(url, passedfields, passeddomains)
       .then(async (data) => {
-        // for matching prefix 
-        const parts = url.split('/');
-        const partsLength = parts.length;
-        const prefix = parts[partsLength - 2];
-        const checkedUrlGroup = checkedUrls.find((_item) => _item === prefix)
-
-        if (checkedUrls.length > 0 && checkedUrlGroup) {
-          console.log("finded prefix >>>", prefix)
-          createNewEntry({
-            pageURL: url,
-            contentTypeID: passedcontentType.contentTypeId,
-            data,
+        await createNewEntry({
+          url,
+          contentTypeID: passedcontentType.contentTypeId,
+          data,
+        })
+          .then(async (entry) => {
+            if (entry?.fields?.slug["en-US"]) {
+              consoleSuccess(
+                `New Entry: ${entry?.fields?.slug["en-US"]} Created Successfully!`
+              );
+            }
+            await new Promise((resolve) => setTimeout(resolve, 100));
           })
-            .then(async (entry) => {
-              if (entry?.fields?.slug["en-US"]) {
-                consoleSuccess(
-                  `New Entry: ${entry?.fields?.slug["en-US"]} Created Successfully!`
-                );
-              }
-              await new Promise((resolve) => setTimeout(resolve, 300));
-            })
-            .catch((err) => { });
-        } else {
-          checkedUrls.push(prefix)
-          console.log("checking with cms >>>", prefix) // for detecting checked url group type
-          client
-            .getSpace(contentfulSpaceId)
-            .then((space) => space.getEnvironment("master"))
-            .then((environment) =>
-              environment.getContentType(passedcontentType?.contentTypeId)
-            )
-            .then((contentType) => {
-              consoleInfo(
-                `${new Date().toLocaleString()}: Content type with the ID '${contentType?.sys.id
-                }' already exists.`
-              );
-              consoleInfo(
-                `${new Date().toLocaleString()}: Creating new entry...`
-              );
-
-              createNewEntry({
-                pageURL: url,
-                contentTypeID: contentType?.sys.id,
-                data,
-              })
-                .then(async (entry) => {
-                  if (entry?.fields?.slug["en-US"]) {
-                    consoleSuccess(
-                      `New Entry: ${entry?.fields?.slug["en-US"]} Created Successfully!`
-                    );
-                  }
-                  await new Promise((resolve) => setTimeout(resolve, 300));
-                })
-                .catch((err) => { });
-            })
-            .catch((err) => {
-              consoleInfo(
-                `${new Date().toLocaleString()}: No content type with the ID '${passedcontentType?.contentTypeId
-                }' found.`
-              );
-              consoleInfo(
-                `${new Date().toLocaleString()}: Creating content type with ID '${passedcontentType?.contentTypeId
-                }'...`
-              );
-              createContentType({ pageURL: url, data, passedcontentType, passedfields }).then((res) => {
-                consoleSuccess(
-                  `Content type with ID '${passedcontentType?.contentTypeId} Created Successfully!`
-                )
-              }
-
-              );
-            });
-        }
+          .catch((err) => { });
+        
       })
       .catch((err) => { });
   }
 }
 
 // Start scraping all pages
-module.exports = { scrapeAllPages };
+module.exports = { scrapeAllPages, createContentType, scrapeData };
