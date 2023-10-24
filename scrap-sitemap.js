@@ -1,8 +1,8 @@
 const axios = require("axios");
 const xml2js = require('xml2js');
 const { ApplyConfig } = require("./apply-config-to-sitemap");
+const {sitemapUrl} = require("./sitemap-config")
 
-let url = "https://www.gwagroup.com.au/sitemap.xml"
 const parser = new xml2js.Parser();
 const groupedUrls = {}
 let errors = 0
@@ -16,7 +16,7 @@ function containsLocale(url) {
 }
 
 const fetchScrapedUrls = async () => {
-    const response = await axios.get(url);
+    const response = await axios.get(sitemapUrl);
     if (response.status === 200) {
         parser.parseString(response.data, (err, result) => {
             if (err) {

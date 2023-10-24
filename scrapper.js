@@ -215,9 +215,9 @@ async function createContentType({ pageURL, data, passedcontentType, passedfield
 
   try {
     // Create a new content model.
-    return client.getSpace(contentfulSpaceId).then(async (space) => {
-      return space.getEnvironment("master").then(async (env) => {
-        return env
+    client.getSpace(contentfulSpaceId).then(async (space) => {
+      space.getEnvironment("master").then(async (env) => {
+        env
           .createContentTypeWithId(passedcontentType?.contentTypeId, {
             name: passedcontentType?.contentTypeName,
             fields,
@@ -235,7 +235,7 @@ async function createContentType({ pageURL, data, passedcontentType, passedfield
                       `New Entry: ${entry?.fields?.slug["en-US"]} Created Successfully!`
                     );
                   }
-                  await new Promise((resolve) => setTimeout(resolve, 1000));
+                  await new Promise((resolve) => setTimeout(resolve, 700));
                 })
                 .catch((err) => { });
             });
@@ -257,12 +257,36 @@ async function createContentType({ pageURL, data, passedcontentType, passedfield
 
 // Loop through the array of URLs and scrape data from each one
 
-async function scrapeAllPages(passedUrls, passedfields, passedcontentType, passeddomains) {
-  let typeExists = 'check'
+async function scrapeAllPages(passedUrls, passedfields, passedcontentType, passeddomains, passedSlug) {
+  const checkedUrls = []
   for (const url of passedUrls) {
     scrapeData(url, passedfields, passeddomains)
       .then(async (data) => {
-        if (typeExists === "check") {
+        // for matching prefix 
+        const parts = url.split('/');
+        const partsLength = parts.length;
+        const prefix = parts[partsLength - 2];
+        const checkedUrlGroup = checkedUrls.find((_item) => _item === prefix)
+
+        if (checkedUrls.length > 0 && checkedUrlGroup) {
+          console.log("finded prefix >>>", prefix)
+          createNewEntry({
+            pageURL: url,
+            contentTypeID: passedcontentType.contentTypeId,
+            data,
+          })
+            .then(async (entry) => {
+              if (entry?.fields?.slug["en-US"]) {
+                consoleSuccess(
+                  `New Entry: ${entry?.fields?.slug["en-US"]} Created Successfully!`
+                );
+              }
+              await new Promise((resolve) => setTimeout(resolve, 300));
+            })
+            .catch((err) => { });
+        } else {
+          checkedUrls.push(prefix)
+          console.log("checking with cms >>>", prefix) // for detecting checked url group type
           client
             .getSpace(contentfulSpaceId)
             .then((space) => space.getEnvironment("master"))
@@ -289,8 +313,7 @@ async function scrapeAllPages(passedUrls, passedfields, passedcontentType, passe
                       `New Entry: ${entry?.fields?.slug["en-US"]} Created Successfully!`
                     );
                   }
-                  typeExists = 'exists'
-                  await new Promise((resolve) => setTimeout(resolve, 1000));
+                  await new Promise((resolve) => setTimeout(resolve, 300));
                 })
                 .catch((err) => { });
             })
@@ -307,27 +330,10 @@ async function scrapeAllPages(passedUrls, passedfields, passedcontentType, passe
                 consoleSuccess(
                   `Content type with ID '${passedcontentType?.contentTypeId} Created Successfully!`
                 )
-                typeExists = 'exists'
               }
 
               );
             });
-        } else {
-          createNewEntry({
-            pageURL: url,
-            contentTypeID: contentType?.sys.id,
-            data,
-          })
-            .then(async (entry) => {
-              if (entry?.fields?.slug["en-US"]) {
-                consoleSuccess(
-                  `New Entry: ${entry?.fields?.slug["en-US"]} Created Successfully!`
-                );
-              }
-              typeExists = true
-              await new Promise((resolve) => setTimeout(resolve, 1000));
-            })
-            .catch((err) => { });
         }
       })
       .catch((err) => { });

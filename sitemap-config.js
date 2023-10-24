@@ -1,7 +1,8 @@
 module.exports = {
+    sitemapUrl:"https://www.gwagroup.com.au/sitemap.xml",
     requiredContentTypes: [
         {
-            slug: "subcategory-products",
+            slug: "who-we-are",
             fields: [
                 // Slug field will be auto generated no need to add here.
                 {
