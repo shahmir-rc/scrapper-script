@@ -1,41 +1,12 @@
 module.exports = {
     requiredContentTypes: [
         {
-            slug: "who-we-are",
-            contentTypeId: null,
+            slug: "subcategory-products",
             fields: [
                 // Slug field will be auto generated no need to add here.
-                // {
-                //     field: "title",
-                //     selector: ".body-content span",
-                //     fieldType: "Symbol",
-                //     required: true,
-                //     defaultValue: "Lorum Ipsum",
-                // },
-                // {
-                //   field: "anyFieldName",
-                //   selector: ".article .abc",
-                //   fieldType: "Text",
-                //   required: true,
-                //   defaultValue: "",
-                // },
-                // {
-                //     field: "subTitle",
-                //     selector: ".body-content .sub-title",
-                //     fieldType: "Symbol",
-                //     required: true,
-                //     defaultValue: "Lorum Ipsum",
-                // },
-                // {
-                //     field: "image",
-                //     selector: ".article .field-image img",
-                //     fieldType: "Media",
-                //     required: true,
-                //     defaultValue: "",
-                // },
                 {
                     field: "content",
-                    selector: ".body-content .description",
+                    selector: ".main-content",
                     fieldType: "Rich text",
                     required: true,
                     defaultValue: "",
@@ -43,11 +14,34 @@ module.exports = {
             ],
             contentType: {
                 contentTypeName: 'Who We Are',
-                contentTypeId: 'whoWeAre',
+                contentTypeId: 'products',
+            },
+            domains: {
+                image_base_path: "https://security.gallagher.com", // Media base path
+            },
+        },
+        {
+            slug: "social-responsibility",
+            fields: [
+                // Slug field will be auto generated no need to add here.
+                {
+                    field: "content",
+                    selector: ".main-content",
+                    fieldType: "Rich text",
+                    required: true,
+                    defaultValue: "",
+                },
+            ],
+            contentType: {
+                contentTypeName: 'Social Responsibility',
+                contentTypeId: 'socialResponsibility',
             },
             domains: {
                 image_base_path: "https://security.gallagher.com", // Media base path
             },
         }
     ]
+
 }
+
+// 

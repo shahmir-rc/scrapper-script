@@ -98,9 +98,11 @@ function scrapeData(url, fields, domains) {
         fields.map((_field) => {
           if (_field?.required) {
             if (_field.fieldType.toLowerCase() === "rich text") {
-              const body = document
+              let body = document
                 .querySelector(_field.selector)
-                .innerHTML.trim();
+
+              if (body) body.innerHTML.trim();
+
               markdownBody = turndownService.turndown(
                 body ?? _field?.defaultValue
               );
@@ -123,7 +125,7 @@ function scrapeData(url, fields, domains) {
 
             let content = document
               .querySelector(_field.selector)
-              .textContent.trim();
+            if (content) content.textContent.trim();
 
             data.push({
               field: _field.field,
@@ -149,7 +151,7 @@ function scrapeData(url, fields, domains) {
 
         Promise.all([...promises]).then((values) => {
           let updatedData = data.map((item) => {
-            if (!!markdownBody && item.field === "content") {
+            if (!!markdownBody && item.field.includes("content")) {
               return { ...item, content: values[0] };
             }
             if (!!imgSrc && item.field === "image") {
@@ -256,54 +258,77 @@ async function createContentType({ pageURL, data, passedcontentType, passedfield
 // Loop through the array of URLs and scrape data from each one
 
 async function scrapeAllPages(passedUrls, passedfields, passedcontentType, passeddomains) {
+  let typeExists = 'check'
   for (const url of passedUrls) {
     scrapeData(url, passedfields, passeddomains)
       .then(async (data) => {
-        client
-          .getSpace(contentfulSpaceId)
-          .then((space) => space.getEnvironment("master"))
-          .then((environment) =>
-            environment.getContentType(passedcontentType?.contentTypeId)
-          )
-          .then((contentType) => {
-            consoleInfo(
-              `${new Date().toLocaleString()}: Content type with the ID '${contentType?.sys.id
-              }' already exists.`
-            );
-            consoleInfo(
-              `${new Date().toLocaleString()}: Creating new entry...`
-            );
+        if (typeExists === "check") {
+          client
+            .getSpace(contentfulSpaceId)
+            .then((space) => space.getEnvironment("master"))
+            .then((environment) =>
+              environment.getContentType(passedcontentType?.contentTypeId)
+            )
+            .then((contentType) => {
+              consoleInfo(
+                `${new Date().toLocaleString()}: Content type with the ID '${contentType?.sys.id
+                }' already exists.`
+              );
+              consoleInfo(
+                `${new Date().toLocaleString()}: Creating new entry...`
+              );
 
-            createNewEntry({
-              pageURL: url,
-              contentTypeID: contentType?.sys.id,
-              data,
-            })
-              .then(async (entry) => {
-                if (entry?.fields?.slug["en-US"]) {
-                  consoleSuccess(
-                    `New Entry: ${entry?.fields?.slug["en-US"]} Created Successfully!`
-                  );
-                }
-                await new Promise((resolve) => setTimeout(resolve, 1000));
+              createNewEntry({
+                pageURL: url,
+                contentTypeID: contentType?.sys.id,
+                data,
               })
-              .catch((err) => { });
+                .then(async (entry) => {
+                  if (entry?.fields?.slug["en-US"]) {
+                    consoleSuccess(
+                      `New Entry: ${entry?.fields?.slug["en-US"]} Created Successfully!`
+                    );
+                  }
+                  typeExists = 'exists'
+                  await new Promise((resolve) => setTimeout(resolve, 1000));
+                })
+                .catch((err) => { });
+            })
+            .catch((err) => {
+              consoleInfo(
+                `${new Date().toLocaleString()}: No content type with the ID '${passedcontentType?.contentTypeId
+                }' found.`
+              );
+              consoleInfo(
+                `${new Date().toLocaleString()}: Creating content type with ID '${passedcontentType?.contentTypeId
+                }'...`
+              );
+              createContentType({ pageURL: url, data, passedcontentType, passedfields }).then((res) => {
+                consoleSuccess(
+                  `Content type with ID '${passedcontentType?.contentTypeId} Created Successfully!`
+                )
+                typeExists = 'exists'
+              }
+
+              );
+            });
+        } else {
+          createNewEntry({
+            pageURL: url,
+            contentTypeID: contentType?.sys.id,
+            data,
           })
-          .catch((err) => {
-            consoleInfo(
-              `${new Date().toLocaleString()}: No content type with the ID '${passedcontentType?.contentTypeId
-              }' found.`
-            );
-            consoleInfo(
-              `${new Date().toLocaleString()}: Creating content type with ID '${passedcontentType?.contentTypeId
-              }'...`
-            );
-            createContentType({ pageURL: url, data, passedcontentType, passedfields }).then((res) =>
-              consoleSuccess(
-                `Content type with ID '${passedcontentType?.contentTypeId} Created Successfully!`
-              )
-            );
-          });
+            .then(async (entry) => {
+              if (entry?.fields?.slug["en-US"]) {
+                consoleSuccess(
+                  `New Entry: ${entry?.fields?.slug["en-US"]} Created Successfully!`
+                );
+              }
+              typeExists = true
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            })
+            .catch((err) => { });
+        }
       })
       .catch((err) => { });
   }

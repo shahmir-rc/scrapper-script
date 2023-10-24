@@ -1,10 +1,6 @@
 const axios = require("axios");
-const fs = require('fs');
 const xml2js = require('xml2js');
-const { requiredContentTypes } = require('./sitemap-config');
-const { scrapeAllPages } = require("./scrapper");
 const { ApplyConfig } = require("./apply-config-to-sitemap");
-const { groupCollapsed } = require("console");
 
 let url = "https://www.gwagroup.com.au/sitemap.xml"
 const parser = new xml2js.Parser();
@@ -38,7 +34,6 @@ const fetchScrapedUrls = async () => {
                 if (requiredUrls) {
                     requiredUrls.forEach(element => {
                         if (containsLocale(element)) {
-                            console.log("contains")
                             if (element.includes("/en/")) {
                                 const parts = element.split('/');
                                 const partsLength = parts.length;
@@ -53,11 +48,9 @@ const fetchScrapedUrls = async () => {
                                     groupedUrls[prefix].push(element);
                                 }
                             }
-
                             return
                         }
                         if (!containsLocale(element)) {
-                            console.log("not contains")
                             const parts = element.split('/');
                             const partsLength = parts.length;
 
@@ -67,7 +60,11 @@ const fetchScrapedUrls = async () => {
                                 if (!groupedUrls[prefix]) {
                                     groupedUrls[prefix] = [];
                                 }
-
+                                const existUrls = groupedUrls[prefix]
+                                const exists = existUrls.find((item) => item === element)
+                                if (exists) {
+                                    return
+                                }
                                 groupedUrls[prefix].push(element);
                             }
 

@@ -1,4 +1,4 @@
-10/23/2023, 5:11:45 PM: Failed to create content type. Error: {
+10/23/2023, 7:36:01 PM: Failed to create content type. Error: {
   "status": 409,
   "statusText": "Conflict",
   "message": "",
@@ -17,152 +17,68 @@
     "method": "put",
     "payloadData": "{\"name\":\"Who We Are\",\"fields\":[{\"id\":\"slug\",\"name\":\"slug\",\"required\":false,\"localized\":false,\"type\":\"Symbol\"},{\"id\":\"content\",\"name\":\"content\",\"required\":false,\"localized\":false,\"type\":\"RichText\"}]}"
   },
-  "requestId": "d87c56e4-e373-457b-8d96-0b88799456ba"
+  "requestId": "7ae123b5-865c-447f-b2ca-55c3c4bf998f"
 }. Page Ref:https://www.gwagroup.com.au/who-we-are/company-history 
-10/23/2023, 5:11:45 PM: Failed to create content type. Error: {
+10/23/2023, 7:36:03 PM: Failed to create content type. Error: {
   "status": 409,
   "statusText": "Conflict",
   "message": "",
   "details": {},
   "request": {
-    "url": "/spaces/v4doujxxktp2/environments/master/content_types/whoWeAre",
+    "url": "/spaces/v4doujxxktp2/environments/master/content_types/socialResponsibility",
     "headers": {
       "Accept": "application/json, text/plain, */*",
       "Content-Type": "application/vnd.contentful.management.v1+json",
       "X-Contentful-User-Agent": "sdk contentful-management.js/0.0.0-determined-by-semantic-release; platform node.js/v18.18.2; os Windows/v18.18.2;",
       "Authorization": "Bearer ...-A9Bk",
       "User-Agent": "axios/1.5.1",
-      "Content-Length": "198",
+      "Content-Length": "209",
       "Accept-Encoding": "gzip, compress, deflate, br"
     },
     "method": "put",
-    "payloadData": "{\"name\":\"Who We Are\",\"fields\":[{\"id\":\"slug\",\"name\":\"slug\",\"required\":false,\"localized\":false,\"type\":\"Symbol\"},{\"id\":\"content\",\"name\":\"content\",\"required\":false,\"localized\":false,\"type\":\"RichText\"}]}"
+    "payloadData": "{\"name\":\"Social Responsibility\",\"fields\":[{\"id\":\"slug\",\"name\":\"slug\",\"required\":false,\"localized\":false,\"type\":\"Symbol\"},{\"id\":\"content\",\"name\":\"content\",\"required\":false,\"localized\":false,\"type\":\"RichText\"}]}"
   },
-  "requestId": "6729c249-be32-48f1-b9df-4a13c366327d"
-}. Page Ref:https://www.gwagroup.com.au/who-we-are/head-office-locations 
-10/23/2023, 5:11:45 PM: Failed to create content type. Error: {
+  "requestId": "b3a06675-df70-4a74-adab-3d2c9a2e6463"
+}. Page Ref:https://www.gwagroup.com.au/social-responsibility/covid-19-response 
+10/23/2023, 7:36:04 PM: Failed to create content type. Error: {
   "status": 409,
   "statusText": "Conflict",
   "message": "",
   "details": {},
   "request": {
-    "url": "/spaces/v4doujxxktp2/environments/master/content_types/whoWeAre",
+    "url": "/spaces/v4doujxxktp2/environments/master/content_types/socialResponsibility",
     "headers": {
       "Accept": "application/json, text/plain, */*",
       "Content-Type": "application/vnd.contentful.management.v1+json",
       "X-Contentful-User-Agent": "sdk contentful-management.js/0.0.0-determined-by-semantic-release; platform node.js/v18.18.2; os Windows/v18.18.2;",
       "Authorization": "Bearer ...-A9Bk",
       "User-Agent": "axios/1.5.1",
-      "Content-Length": "198",
+      "Content-Length": "209",
       "Accept-Encoding": "gzip, compress, deflate, br"
     },
     "method": "put",
-    "payloadData": "{\"name\":\"Who We Are\",\"fields\":[{\"id\":\"slug\",\"name\":\"slug\",\"required\":false,\"localized\":false,\"type\":\"Symbol\"},{\"id\":\"content\",\"name\":\"content\",\"required\":false,\"localized\":false,\"type\":\"RichText\"}]}"
+    "payloadData": "{\"name\":\"Social Responsibility\",\"fields\":[{\"id\":\"slug\",\"name\":\"slug\",\"required\":false,\"localized\":false,\"type\":\"Symbol\"},{\"id\":\"content\",\"name\":\"content\",\"required\":false,\"localized\":false,\"type\":\"RichText\"}]}"
   },
-  "requestId": "db3d748f-8f07-4230-91a0-e802e8a0cded"
-}. Page Ref:https://www.gwagroup.com.au/who-we-are/corporate-directory 
-10/23/2023, 5:11:46 PM: Failed to create content type. Error: {
+  "requestId": "26fe2fb6-513d-497a-9f09-e0b331f58053"
+}. Page Ref:https://www.gwagroup.com.au/social-responsibility/our-communities 
+10/23/2023, 7:36:06 PM: Failed to create content type. Error: {
   "status": 409,
   "statusText": "Conflict",
   "message": "",
   "details": {},
   "request": {
-    "url": "/spaces/v4doujxxktp2/environments/master/content_types/whoWeAre",
+    "url": "/spaces/v4doujxxktp2/environments/master/content_types/socialResponsibility",
     "headers": {
       "Accept": "application/json, text/plain, */*",
       "Content-Type": "application/vnd.contentful.management.v1+json",
       "X-Contentful-User-Agent": "sdk contentful-management.js/0.0.0-determined-by-semantic-release; platform node.js/v18.18.2; os Windows/v18.18.2;",
       "Authorization": "Bearer ...-A9Bk",
       "User-Agent": "axios/1.5.1",
-      "Content-Length": "198",
+      "Content-Length": "209",
       "Accept-Encoding": "gzip, compress, deflate, br"
     },
     "method": "put",
-    "payloadData": "{\"name\":\"Who We Are\",\"fields\":[{\"id\":\"slug\",\"name\":\"slug\",\"required\":false,\"localized\":false,\"type\":\"Symbol\"},{\"id\":\"content\",\"name\":\"content\",\"required\":false,\"localized\":false,\"type\":\"RichText\"}]}"
+    "payloadData": "{\"name\":\"Social Responsibility\",\"fields\":[{\"id\":\"slug\",\"name\":\"slug\",\"required\":false,\"localized\":false,\"type\":\"Symbol\"},{\"id\":\"content\",\"name\":\"content\",\"required\":false,\"localized\":false,\"type\":\"RichText\"}]}"
   },
-  "requestId": "337463a9-06e6-4332-bffc-c9367eab8dea"
-}. Page Ref:https://www.gwagroup.com.au/who-we-are/board-of-directors 
-10/23/2023, 5:11:47 PM: Failed to create content type. Error: {
-  "status": 409,
-  "statusText": "Conflict",
-  "message": "",
-  "details": {},
-  "request": {
-    "url": "/spaces/v4doujxxktp2/environments/master/content_types/whoWeAre",
-    "headers": {
-      "Accept": "application/json, text/plain, */*",
-      "Content-Type": "application/vnd.contentful.management.v1+json",
-      "X-Contentful-User-Agent": "sdk contentful-management.js/0.0.0-determined-by-semantic-release; platform node.js/v18.18.2; os Windows/v18.18.2;",
-      "Authorization": "Bearer ...-A9Bk",
-      "User-Agent": "axios/1.5.1",
-      "Content-Length": "198",
-      "Accept-Encoding": "gzip, compress, deflate, br"
-    },
-    "method": "put",
-    "payloadData": "{\"name\":\"Who We Are\",\"fields\":[{\"id\":\"slug\",\"name\":\"slug\",\"required\":false,\"localized\":false,\"type\":\"Symbol\"},{\"id\":\"content\",\"name\":\"content\",\"required\":false,\"localized\":false,\"type\":\"RichText\"}]}"
-  },
-  "requestId": "6a7549f2-d907-4e10-a531-97d7783b3611"
-}. Page Ref:https://www.gwagroup.com.au/who-we-are/board-of-directors 
-10/23/2023, 5:11:47 PM: Failed to create content type. Error: {
-  "status": 409,
-  "statusText": "Conflict",
-  "message": "",
-  "details": {},
-  "request": {
-    "url": "/spaces/v4doujxxktp2/environments/master/content_types/whoWeAre",
-    "headers": {
-      "Accept": "application/json, text/plain, */*",
-      "Content-Type": "application/vnd.contentful.management.v1+json",
-      "X-Contentful-User-Agent": "sdk contentful-management.js/0.0.0-determined-by-semantic-release; platform node.js/v18.18.2; os Windows/v18.18.2;",
-      "Authorization": "Bearer ...-A9Bk",
-      "User-Agent": "axios/1.5.1",
-      "Content-Length": "198",
-      "Accept-Encoding": "gzip, compress, deflate, br"
-    },
-    "method": "put",
-    "payloadData": "{\"name\":\"Who We Are\",\"fields\":[{\"id\":\"slug\",\"name\":\"slug\",\"required\":false,\"localized\":false,\"type\":\"Symbol\"},{\"id\":\"content\",\"name\":\"content\",\"required\":false,\"localized\":false,\"type\":\"RichText\"}]}"
-  },
-  "requestId": "be938088-c53c-4767-bbcf-8cd179ab97e3"
-}. Page Ref:https://www.gwagroup.com.au/who-we-are/corporate-directory 
-10/23/2023, 5:11:47 PM: Failed to create content type. Error: {
-  "status": 409,
-  "statusText": "Conflict",
-  "message": "",
-  "details": {},
-  "request": {
-    "url": "/spaces/v4doujxxktp2/environments/master/content_types/whoWeAre",
-    "headers": {
-      "Accept": "application/json, text/plain, */*",
-      "Content-Type": "application/vnd.contentful.management.v1+json",
-      "X-Contentful-User-Agent": "sdk contentful-management.js/0.0.0-determined-by-semantic-release; platform node.js/v18.18.2; os Windows/v18.18.2;",
-      "Authorization": "Bearer ...-A9Bk",
-      "User-Agent": "axios/1.5.1",
-      "Content-Length": "198",
-      "Accept-Encoding": "gzip, compress, deflate, br"
-    },
-    "method": "put",
-    "payloadData": "{\"name\":\"Who We Are\",\"fields\":[{\"id\":\"slug\",\"name\":\"slug\",\"required\":false,\"localized\":false,\"type\":\"Symbol\"},{\"id\":\"content\",\"name\":\"content\",\"required\":false,\"localized\":false,\"type\":\"RichText\"}]}"
-  },
-  "requestId": "6a6f3a34-10fa-4764-8d9f-c988a066e6a3"
-}. Page Ref:https://www.gwagroup.com.au/who-we-are/company-profile 
-10/23/2023, 5:11:47 PM: Failed to create content type. Error: {
-  "status": 409,
-  "statusText": "Conflict",
-  "message": "",
-  "details": {},
-  "request": {
-    "url": "/spaces/v4doujxxktp2/environments/master/content_types/whoWeAre",
-    "headers": {
-      "Accept": "application/json, text/plain, */*",
-      "Content-Type": "application/vnd.contentful.management.v1+json",
-      "X-Contentful-User-Agent": "sdk contentful-management.js/0.0.0-determined-by-semantic-release; platform node.js/v18.18.2; os Windows/v18.18.2;",
-      "Authorization": "Bearer ...-A9Bk",
-      "User-Agent": "axios/1.5.1",
-      "Content-Length": "198",
-      "Accept-Encoding": "gzip, compress, deflate, br"
-    },
-    "method": "put",
-    "payloadData": "{\"name\":\"Who We Are\",\"fields\":[{\"id\":\"slug\",\"name\":\"slug\",\"required\":false,\"localized\":false,\"type\":\"Symbol\"},{\"id\":\"content\",\"name\":\"content\",\"required\":false,\"localized\":false,\"type\":\"RichText\"}]}"
-  },
-  "requestId": "71976fbf-d99a-4b98-b7ff-a927cca5100b"
-}. Page Ref:https://www.gwagroup.com.au/who-we-are/overarching-strategy 
+  "requestId": "92de5d6b-9921-4c87-a6f8-9de586773c83"
+}. Page Ref:https://www.gwagroup.com.au/social-responsibility/modern-slavery 
