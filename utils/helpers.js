@@ -13,7 +13,7 @@ const consoleInfo = (message) =>
 
 // Scrape Dynamic Content
 async function scrapeDynamicContent({ pageURL, pageSelector, attributes }) {
-  const browser = await puppeteer.launch({ headless: "new" });
+  const browser = await puppeteer.launch({ headless: "new",timeout:80000 });
   const page = await browser.newPage();
 
   try {

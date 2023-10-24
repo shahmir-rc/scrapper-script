@@ -2,8 +2,8 @@ module.exports = {
   urls: [
     // "https://security.gallagher.com/en-NZ/News/Gallagher-Security-welcomes-New-Zealand-Foreign-Minister-to-South-African-Head-Ofdfsdfic",
     // "https://security.gallagher.com/en-NZ/News/Gallagher-Security-welcomes-New-Zealand-Foreign-Minister-to-South-African-Head-Offissdfsdfdsce",
-    // "https://security.gallagher.com/en-NZ/News/GardaWorld-Partners-with-Gallagher-to-Create-a-State-of-the-Art-Security-Experience-at-Montreal-Headquarters",
-    "https://security.gallagher.com/en-NZ/News/Safer-People-Better-Business", //Video template
+    "https://security.gallagher.com/en-NZ/News/GardaWorld-Partners-with-Gallagher-to-Create-a-State-of-the-Art-Security-Experience-at-Montreal-Headquarters",
+    // "https://security.gallagher.com/en-NZ/News/Safer-People-Better-Business", //Video template
     // Add more URLs as needed
   ],
   fields: [
@@ -15,16 +15,16 @@ module.exports = {
       required: true,
       defaultValue: "Lorum Ipsum",
     },
-    {
-      field: "video",
-      selector: ".article .component.video iframe",
-      elementAttributes: [{ attribute: "src" }, { attribute: "title" }],
+    // {
+    //   field: "video",
+    //   selector: ".article .component.video iframe",
+    //   elementAttributes: [{ attribute: "src" }, { attribute: "title" }],
 
-      fieldType: "Media",
-      required: true,
-      dynamicContent:true, // If the content is generated dynamically.
-      defaultValue: "",
-    },
+    //   fieldType: "Media",
+    //   required: true,
+    //   dynamicContent:true, // If the content is generated dynamically.
+    //   defaultValue: "",
+    // },
     // {
     //   field: "anyFieldName",
     //   selector: ".article .abc",
