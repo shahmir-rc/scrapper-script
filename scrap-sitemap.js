@@ -1,7 +1,7 @@
 const axios = require("axios");
 const xml2js = require('xml2js');
 const { ApplyConfig } = require("./apply-config-to-sitemap");
-const {sitemapUrl} = require("./sitemap-config")
+const { sitemapUrl } = require("./sitemap-config")
 
 const parser = new xml2js.Parser();
 const groupedUrls = {}
@@ -34,9 +34,16 @@ const fetchScrapedUrls = async () => {
                 if (requiredUrls) {
                     requiredUrls.forEach(element => {
                         if (containsLocale(element)) {
-                            if (element.includes("/en/")) {
-                                const parts = element.split('/');
-                                const partsLength = parts.length;
+                            if (element.includes("/au/")) {
+                                let modifiedURL = element
+                                let parts = element.split('/');
+                                let partsLength = parts.length;
+                                const lastBar = parts[partsLength - 1]
+                                if (lastBar === '') {
+                                    modifiedURL = element.slice(0, -1);
+                                    parts = modifiedURL.split('/')
+                                    partsLength = parts.length
+                                }
 
                                 if (partsLength >= 2) {
                                     const prefix = parts[partsLength - 2];
@@ -44,16 +51,26 @@ const fetchScrapedUrls = async () => {
                                     if (!groupedUrls[prefix]) {
                                         groupedUrls[prefix] = [];
                                     }
-
-                                    groupedUrls[prefix].push(element);
+                                    const existUrls = groupedUrls[prefix]
+                                    const exists = existUrls.find((item) => item === element)
+                                    if (exists) {
+                                        return
+                                    }
+                                    groupedUrls[prefix].push(modifiedURL);
                                 }
                             }
                             return
                         }
                         if (!containsLocale(element)) {
-                            const parts = element.split('/');
-                            const partsLength = parts.length;
-
+                            let modifiedURL = element
+                            let parts = element.split('/');
+                            let partsLength = parts.length;
+                            const lastBar = parts[partsLength - 1]
+                            if (lastBar === '') {
+                                modifiedURL = element.slice(0, -1);
+                                parts = modifiedURL.split('/')
+                                partsLength = parts.length
+                            }
                             if (partsLength >= 2) {
                                 const prefix = parts[partsLength - 2];
 
@@ -65,7 +82,7 @@ const fetchScrapedUrls = async () => {
                                 if (exists) {
                                     return
                                 }
-                                groupedUrls[prefix].push(element);
+                                groupedUrls[prefix].push(modifiedURL);
                             }
 
                             return
@@ -73,7 +90,8 @@ const fetchScrapedUrls = async () => {
 
                     });
                     // config settings configuring
-                    ApplyConfig(groupedUrls)
+                    // ApplyConfig(groupedUrls)
+                    console.log(">>> grouped urls here ", groupedUrls)
                 } else {
                     if (errors <= 2) {
                         console.log("Trying again ...")

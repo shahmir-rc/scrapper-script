@@ -1,5 +1,5 @@
 module.exports = {
-    sitemapUrl:"https://www.gwagroup.com.au/sitemap.xml",
+    sitemapUrl:"https://www.methven.com/sitemap/au/sitemap.xml",
     requiredContentTypes: [
         {
             slug: "who-we-are",
