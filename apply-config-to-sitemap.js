@@ -15,6 +15,17 @@ const ApplyConfig = async (groupedUrls) => {
                 .then((environment) => environment.getContentType(ele.contentType.contentTypeId)).then(async (contentType) => {
                     consoleInfo(`Content type with the ID '${contentType?.sys.id}' already exists.`);
                     consoleInfo(`Creating new entry...`);
+                    for (const url of urlsToScrap) {
+                        await scrapDataForComponents({ components: ele?.components, url: url, domains: ele?.domains }).then(async (_ids) => {
+                            console.log("_ids here >>>", _ids)
+                            // await createEntryForParentWithReferences({ components: ele?.components, url: url, domains: ele?.domains,fields:ele?.fields }).then((_parent)=>{
+                            //     console.log("Whole page published for",_parent?.name)
+                            // })
+                        }).catch((error) => {
+                            console.log("error here in scra[peing data >>>",error)
+                        })
+                    }
+                    return
                     // await scrapeAllPages(urlsToScrap, ele.fields, ele.contentType, ele.domains, ele.slug); // Wait for the scraping to complete
                 }).catch(async (er) => {
                     consoleInfo(`No content type with the ID '${ele.contentType?.contentTypeId}' found.`);
@@ -30,9 +41,10 @@ const ApplyConfig = async (groupedUrls) => {
                             if (res) {
                                 for (const url of urlsToScrap) {
                                     await scrapDataForComponents({ components: ele?.components, url: url, domains: ele?.domains }).then(async (_ids) => {
-                                        await createEntryForParentWithReferences({ components: ele?.components, url: url, domains: ele?.domains,fields:ele?.fields }).then((_parent)=>{
-                                            console.log("Whole page published for",_parent?.name)
-                                        })
+                                        console.log("_ids here >>>", _ids)
+                                        // await createEntryForParentWithReferences({ components: ele?.components, url: url, domains: ele?.domains,fields:ele?.fields }).then((_parent)=>{
+                                        //     console.log("Whole page published for",_parent?.name)
+                                        // })
                                     })
                                 }
                             } else {

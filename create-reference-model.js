@@ -1,12 +1,9 @@
 const { contentfulSpaceId } = require("./constant");
-const { getContentTypeField } = require("./field-types");
 const { client } = require("./lib/client");
 const { logError, scrapeData, createNewEntry } = require("./scrapper");
 const { JSDOM } = require("jsdom");
 const axios = require("axios");
 const { richTextFromMarkdown } = require("@contentful/rich-text-from-markdown");
-const { client } = require("./lib/client.js");
-const { contentfulSpaceId } = require("./constant.js");
 const { URL } = require("url");
 var TurndownService = require("turndown");
 var turndownService = new TurndownService();
@@ -16,11 +13,11 @@ const fs = require("fs");
 const { consoleSuccess, consoleInfo } = require("./utils/helpers.js");
 
 const contentTypeMapping = {
-  jpg: "image/jpeg",
-  jpeg: "image/jpeg",
-  png: "image/png",
-  gif: "image/gif",
-  webp: "image/webp",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    gif: "image/gif",
+    webp: "image/webp",
 };
 
 const createNewAsset = async ({ pageURL, imageURL, title }) => {
@@ -29,39 +26,39 @@ const createNewAsset = async ({ pageURL, imageURL, title }) => {
     const fileName = urlObject.pathname.split("/").pop();
     const fileExtension = fileName.split(".").pop().toLowerCase();
     const contentType =
-      contentTypeMapping[fileExtension] || "application/octet-stream";
-  
+        contentTypeMapping[fileExtension] || "application/octet-stream";
+
     return client
-      .getSpace(contentfulSpaceId)
-      .then((space) => space.getEnvironment("master"))
-      .then((environment) =>
-        environment.createAsset({
-          fields: {
-            title: {
-              "en-US": title ?? "",
-            },
-            file: {
-              "en-US": {
-                contentType,
-                fileName,
-                upload: imageURL,
-              },
-            },
-          },
+        .getSpace(contentfulSpaceId)
+        .then((space) => space.getEnvironment("master"))
+        .then((environment) =>
+            environment.createAsset({
+                fields: {
+                    title: {
+                        "en-US": title ?? "",
+                    },
+                    file: {
+                        "en-US": {
+                            contentType,
+                            fileName,
+                            upload: imageURL,
+                        },
+                    },
+                },
+            })
+        )
+        .then((asset) => asset.processForAllLocales())
+        .then((asset) => {
+            asset.publish();
+            consoleSuccess(`Image: ${title}. Uploaded to Contentful successfully!`);
+            return asset;
         })
-      )
-      .then((asset) => asset.processForAllLocales())
-      .then((asset) => {
-        asset.publish();
-        consoleSuccess(`Image: ${title}. Uploaded to Contentful successfully!`);
-        return asset;
-      })
-      .catch((error) => {
-        const errorMessage = `Failed to upload media/image to contentful. Error: Invalid URL. ${error.message}. Page Ref: ${pageURL} `;
-        logError(errorMessage);
-        reject(errorMessage);
-      });
-  };
+        .catch((error) => {
+            const errorMessage = `Failed to upload media/image to contentful. Error: Invalid URL. ${error.message}. Page Ref: ${pageURL} `;
+            logError(errorMessage);
+            reject(errorMessage);
+        });
+};
 
 const createComponentsModels = async ({ pageURL, passedComponents }) => {
     let createdModelsOfComponents = []
@@ -143,124 +140,130 @@ const createParentModelWithReference = async ({ pageURL, data, passedcontentType
     return createdParentModel
 }
 
-const scrapeDataForComponents = async = () => {
+const scrapeDataForComponents = async = ({ url, fields, domains, document }) => {
     consoleInfo(
         `${new Date().toLocaleString()}: Scrapping '${url}' content...)`
-      );
-      return new Promise(async (resolve, reject) => {
+    );
+    return new Promise(async (resolve, reject) => {
         try {
-          const response = await axios.get(url);
-          if (response.status === 200) {
-            const html = response.data;
-            const dom = new JSDOM(html);
-            const document = dom.window.document;
-    
             // Extract data from the page using DOM methods and provided selectors
             let data = [];
-    
+
             let imgSrc = "";
             let imgTitle = "";
             let markdownBody = "";
-    
-            data.push({
-              field: "slug",
-              fieldType: "Symbol",
-              content: url.split("/").pop(),
-            });
-    
+
+            // data.push({
+            //     field: "slug",
+            //     fieldType: "Symbol",
+            //     content: url.split("/").pop(),
+            // });
+
             fields.map((_field) => {
-              if (_field?.required) {
-                if (_field.fieldType.toLowerCase() === "rich text") {
-                  let body = document
-                    .querySelector(_field.selector)
-    
-                  if (body) body.innerHTML.trim();
-    
-                  markdownBody = turndownService.turndown(
-                    body ?? _field?.defaultValue
-                  );
-                  data.push({
-                    field: _field.field,
-                    fieldType: _field.fieldType,
-                  });
-                  return;
-                }
-                if (_field.fieldType.toLowerCase() === "media") {
-                  const imageEl = document.querySelector(_field.selector);
-                  imgSrc = imageEl.getAttribute("src") ?? _field?.defaultValue;
-                  imgTitle = imageEl.getAttribute("title");
-                  data.push({
-                    field: _field.field,
-                    fieldType: _field.fieldType,
-                  });
-                  return;
-                }
-    
-                let content = document
-                  .querySelector(_field.selector)
-                if (content) content.textContent.trim();
-    
-                data.push({
-                  field: _field.field,
-                  content: content ?? _field?.defaultValue,
-                  fieldType: _field.fieldType,
-                });
-              } else return;
+                if (_field?.required) {
+                    if (_field.fieldType.toLowerCase() === "rich text") {
+                        let body = document
+                            .querySelector(_field.selector)
+
+                        if (body) body.innerHTML.trim();
+
+                        markdownBody = turndownService.turndown(
+                            body ?? _field?.defaultValue
+                        );
+                        data.push({
+                            field: _field.field,
+                            fieldType: _field.fieldType,
+                        });
+                        return;
+                    }
+                    if (_field.fieldType.toLowerCase() === "media") {
+                        const imageEl = document.querySelector(_field.selector);
+                        imgSrc = imageEl.getAttribute("src") ?? _field?.defaultValue;
+                        imgTitle = imageEl.getAttribute("title");
+                        data.push({
+                            field: _field.field,
+                            fieldType: _field.fieldType,
+                        });
+                        return;
+                    }
+
+                    let content = document
+                        .querySelector(_field.selector)
+                    if (content) content = content.textContent.trim();
+
+                    data.push({
+                        field: _field.field,
+                        content: content ?? _field?.defaultValue,
+                        fieldType: _field.fieldType,
+                    });
+                } else return;
             });
-    
+
             let promises = [];
             if (markdownBody) {
-              promises.push(richTextFromMarkdown(markdownBody));
+                promises.push(richTextFromMarkdown(markdownBody));
             }
             if (imgSrc) {
-              promises.push(
-                createNewAsset({
-                  pageURL: url,
-                  imageURL: `${domains?.image_base_path}${imgSrc}`,
-                  title: imgTitle ?? "Untitled",
-                })
-              );
+                promises.push(
+                    createNewAsset({
+                        pageURL: url,
+                        imageURL: `${domains?.image_base_path}${imgSrc}`,
+                        title: imgTitle ?? "Untitled",
+                    })
+                );
             }
-    
+
             Promise.all([...promises]).then((values) => {
-              let updatedData = data.map((item) => {
-                if (!!markdownBody && item.field.includes("content")) {
-                  return { ...item, content: values[0] };
-                }
-                if (!!imgSrc && item.field === "image") {
-                  return {
-                    ...item,
-                    content: !!markdownBody ? values[1] : values[0],
-                  };
-                }
-                return item;
-              });
-    
-              resolve(updatedData);
+                let updatedData = data.map((item) => {
+                    if (!!markdownBody && item.field.includes("content")) {
+                        return { ...item, content: values[0] };
+                    }
+                    if (!!imgSrc && item.field === "image") {
+                        return {
+                            ...item,
+                            content: !!markdownBody ? values[1] : values[0],
+                        };
+                    }
+                    return item;
+                });
+
+                resolve(updatedData);
             });
-          } else {
-            const errorMessage = `Failed to scrape page content. Error: Invalid URL. 404. Page Ref: ${url} `;
+
+        } catch (error) {
+            const errorMessage = `Failed to scrape page content. Error: Invalid URL. ${error.message}. Page Ref: ${url} `;
             logError(errorMessage);
             reject(errorMessage);
-          }
-        } catch (error) {
-          const errorMessage = `Failed to scrape page content. Error: Invalid URL. ${error.message}. Page Ref: ${url} `;
-          logError(errorMessage);
-          reject(errorMessage);
         }
-      });
+    });
 }
 
 const scrapDataForComponents = async ({ components, url, domains }) => {
     let scrapedComponents = []
-    for (const component of components) {
-        await scrapeData(url, fields, domains).then(async (_component) => {
-            await createNewEntry({ pageURL: url, contentTypeID: component?.contentType?.contentTypeId, data: _component }).then((publishedEntry) => {
-                console.log("published entry id here >>>", publishedEntry?.sys?.id)
-                scrapedComponents.push(publishedEntry?.sys?.id)
-            })
-        })
-    }
+
+    await axios.get(url).then(async (_scrapedPageData) => {
+        if (_scrapedPageData.status === 200) {
+            const html = _scrapedPageData.data;
+            const dom = new JSDOM(html);
+            const document = dom.window.document;
+
+            for (const component of components) {
+                await scrapeDataForComponents({ url, fields: component.fields, domains, document }).then(async (_components) => {
+                    console.log("component data returned from scrape >>>>", _components)
+                    // for (const _component of _components) {
+                        await createNewEntry({ pageURL: url, contentTypeID: component?.contentType?.contentTypeId, data: _components }).then((publishedEntry) => {
+                            console.log("published entry id here >>>", publishedEntry)
+                            scrapedComponents.push(publishedEntry?.sys?.id)
+                        })
+                    // }
+                })
+            }
+        } else {
+            const errorMessage = `Failed to scrape page content. Error: Invalid URL. 404. Page Ref: ${url} `;
+            logError(errorMessage);
+        }
+    })
+
 
     return scrapedComponents;
 }

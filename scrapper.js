@@ -181,6 +181,7 @@ async function scrapeData(url, fields, domains) {
 }
 // Function to send data to Contentful
 async function createNewEntry({ pageURL, contentTypeID, data }) {
+  console.log("data here in craeet entry >>>",data)
   let fields = {};
   data.map((_field) => {
     fields[_field?.field] = getFieldContent(_field);
@@ -194,6 +195,7 @@ async function createNewEntry({ pageURL, contentTypeID, data }) {
           .createEntry(contentTypeID, { fields })
           .then(async (entry) => {
             await entry.publish();
+            console.log("entry after puiblished",entry)
             return entry;
           })
           .catch((error) => {
