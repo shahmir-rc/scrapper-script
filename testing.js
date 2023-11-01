@@ -10,7 +10,7 @@ var turndownService = new TurndownService();
 const { getFieldContent, getContentTypeField } = require("./field-types.js");
 const fs = require("fs");
 const { consoleSuccess, consoleInfo } = require("./utils/helpers.js");
-
+ 
 const contentTypeMapping = {
   jpg: "image/jpeg",
   jpeg: "image/jpeg",
@@ -30,7 +30,8 @@ function logError(errorMsg) {
 }
 // Clear the error.log file at the beginning
 fs.writeFileSync("error.log", "");
-
+ 
+ 
 const createNewAsset = async ({ pageURL, imageURL, title }) => {
   consoleInfo("Uploading media...");
   const urlObject = new URL(imageURL);
@@ -38,7 +39,7 @@ const createNewAsset = async ({ pageURL, imageURL, title }) => {
   const fileExtension = fileName.split(".").pop().toLowerCase();
   const contentType =
     contentTypeMapping[fileExtension] || "application/octet-stream";
-
+ 
   return client
     .getSpace(contentfulSpaceId)
     .then((space) => space.getEnvironment("master"))
@@ -70,43 +71,11 @@ const createNewAsset = async ({ pageURL, imageURL, title }) => {
       reject(errorMessage);
     });
 };
-
-const fieldHandlers = {
-  "rich text": async ({field, document}) => {
-    let body = document.querySelector(field?.selector);
-
-    if (body) body.innerHTML.trim();
-    const content = await richTextFromMarkdown(
-      turndownService.turndown(body ?? field?.defaultValue)
-    );
-    return {
-      field: field?.field,
-      fieldType: field?.fieldType,
-      content,
-    };
-  },
-  reference: async ({url, field, document}) => {
-    try {
-      const res = await scrapeData({
-        url,
-        page: field?.contentModel,
-        reference: field?.field,
-      });
-      return {
-        field: field?.field,
-        fieldType: field?.fieldType,
-        fields: res,
-      };
-    } catch (error) {
-      throw error;
-    }
-  },
-  // Add more field type handlers as needed
-};
 // Function to scrape data from a single URL
-async function scrapeData({ url, page, reference }) {
-  consoleInfo(`${new Date().toLocaleString()}: Scrapping '${url}' content...)`);
-
+async function scrapeData(url, fields, domains) {
+  consoleInfo(
+    `${new Date().toLocaleString()}: Scrapping '${url}' content...)`
+  );
   return new Promise(async (resolve, reject) => {
     try {
       const response = await axios.get(url);
@@ -114,82 +83,109 @@ async function scrapeData({ url, page, reference }) {
         const html = response.data;
         const dom = new JSDOM(html);
         const document = dom.window.document;
-
+ 
         // Extract data from the page using DOM methods and provided selectors
         let data = [];
-
+ 
         let imgSrc = "";
         let imgTitle = "";
-        let markdownBody = null;
-        let tasks = [];
-
-        // Created slug field
+        let markdownBody = "";
+ 
         data.push({
           field: "slug",
           fieldType: "Symbol",
           content: url.split("/").pop(),
         });
-
-        const indexToUpdate = data.findIndex(
-          (el) => el.reference === reference
-        );
-
-
-        const getFieldContent = (field) => {
-          return new Promise(async (resolve, reject) => {
-            try {
-              if (
-                field?.required &&
-                fieldHandlers[field.fieldType.toLowerCase()]
-              ) {
-                try {
-                  const result = await fieldHandlers[
-                    field.fieldType.toLowerCase()
-                  ]({url,field, document});
-                  resolve(result);
-                } catch (error) {
-                  reject(error);
-                }
-              } else {
-                resolve({});
-              }
-            } catch (error) {
-              reject(error);
+ 
+        fields.map((_field) => {
+          if (_field?.required) {
+            if (_field.fieldType.toLowerCase() === "rich text") {
+              let body = document
+                .querySelector(_field.selector)
+ 
+              if (body) body.innerHTML.trim();
+ 
+              markdownBody = turndownService.turndown(
+                body ?? _field?.defaultValue
+              );
+              data.push({
+                field: _field.field,
+                fieldType: _field.fieldType,
+              });
+              return;
             }
+            if (_field.fieldType.toLowerCase() === "media") {
+              const imageEl = document.querySelector(_field.selector);
+              imgSrc = imageEl.getAttribute("src") ?? _field?.defaultValue;
+              imgTitle = imageEl.getAttribute("title");
+              data.push({
+                field: _field.field,
+                fieldType: _field.fieldType,
+              });
+              return;
+            }
+ 
+            let content = document
+              .querySelector(_field.selector)
+            if (content) content.textContent.trim();
+ 
+            data.push({
+              field: _field.field,
+              content: content ?? _field?.defaultValue,
+              fieldType: _field.fieldType,
+            });
+          } else return;
+        });
+ 
+        let promises = [];
+        if (markdownBody) {
+          promises.push(richTextFromMarkdown(markdownBody));
+        }
+        if (imgSrc) {
+          promises.push(
+            createNewAsset({
+              pageURL: url,
+              imageURL: `${domains?.image_base_path}${imgSrc}`,
+              title: imgTitle ?? "Untitled",
+            })
+          );
+        }
+ 
+        Promise.all([...promises]).then((values) => {
+          let updatedData = data.map((item) => {
+            if (!!markdownBody && item.field.includes("content")) {
+              return { ...item, content: values[0] };
+            }
+            if (!!imgSrc && item.field === "image") {
+              return {
+                ...item,
+                content: !!markdownBody ? values[1] : values[0],
+              };
+            }
+            return item;
           });
-        };
-
-        const results = await Promise.all(
-          page?.fields.map((_field) => getFieldContent(_field))
-        );
-        // Filter out empty objects from the results
-        const filteredResults = results.filter(
-          (result) => Object.keys(result).length > 0
-        );
-
-        console.log("=-=-=-=-=results", filteredResults);
-
-        resolve(filteredResults); // Resolve the promise with the results
+ 
+          resolve(updatedData);
+        });
       } else {
         const errorMessage = `Failed to scrape page content. Error: Invalid URL. 404. Page Ref: ${url} `;
         logError(errorMessage);
-        reject(new Error(errorMessage));
+        reject(errorMessage);
       }
     } catch (error) {
       const errorMessage = `Failed to scrape page content. Error: Invalid URL. ${error.message}. Page Ref: ${url} `;
       logError(errorMessage);
-      reject(new Error(errorMessage));
+      reject(errorMessage);
     }
   });
 }
-
 // Function to send data to Contentful
 async function createNewEntry({ pageURL, contentTypeID, data }) {
   let fields = {};
   data.map((_field) => {
     fields[_field?.field] = getFieldContent(_field);
   });
-
+ 
   try {
     // Create a new entry in Contentful with scraped data
     return client.getSpace(contentfulSpaceId).then(async (space) => {
@@ -201,29 +197,21 @@ async function createNewEntry({ pageURL, contentTypeID, data }) {
             return entry;
           })
           .catch((error) => {
-            const errorMessage = `Failed to create new entry on Contentful. Error: ${
-              error?.message ?? ""
-            }. Status: ${error?.status ?? ""}. Status Text: ${
-              error?.statusText ?? ""
-            }. Page Ref:${pageURL} `;
+            const errorMessage = `Failed to create new entry on Contentful. Error: ${error?.message ?? ""
+              }. Status: ${error?.status ?? ""}. Status Text: ${error?.statusText ?? ""
+              }. Page Ref:${pageURL} `;
             logError(errorMessage);
           });
       });
     });
   } catch (error) {
-    const errorMessage = `Failed to create new entry on Contentful. Error: ${
-      error?.message ?? ""
-    }. Page Ref:${pageURL} `;
+    const errorMessage = `Failed to create new entry on Contentful. Error: ${error?.message ?? ""
+      }. Page Ref:${pageURL} `;
     logError(errorMessage);
   }
 }
-
-async function createContentType({
-  pageURL,
-  data,
-  passedcontentType,
-  passedfields,
-}) {
+ 
+async function createContentType({ pageURL, data, passedcontentType, passedfields }) {
   let fields = data.map((_field) => getContentTypeField(_field));
   try {
     // Create a new content model.
@@ -236,34 +224,27 @@ async function createContentType({
           })
           .then(async (contentType) => {
             await contentType.publish().then((_contentType) => {
-              console.log("created content tyepe", _contentType?.sys?.id);
+              console.log("created content tyepe", _contentType?.sys?.id)
             });
           })
           .catch((error) => {
-            const errorMessage = `Failed to create content type. Error: ${
-              error?.message ?? ""
-            }. Page Ref:${pageURL} `;
+            const errorMessage = `Failed to create content type. Error: ${error?.message ?? ""
+              }. Page Ref:${pageURL} `;
             console.log("-==-=-=-=errorMessage", errorMessage);
             logError(errorMessage);
           });
       });
     });
   } catch (error) {
-    const errorMessage = `Failed to create new content model on Contentful. Error: ${
-      error?.message ?? ""
-    }. Page Ref:${pageURL} `;
+    const errorMessage = `Failed to create new content model on Contentful. Error: ${error?.message ?? ""
+      }. Page Ref:${pageURL} `;
     logError(errorMessage);
   }
 }
-
+ 
 // Loop through the array of URLs and scrape data from each one
-
-async function scrapeAllPages(
-  passedUrls,
-  passedfields,
-  passedcontentType,
-  passeddomains
-) {
+ 
+async function scrapeAllPages(passedUrls, passedfields, passedcontentType, passeddomains, passedSlug) {
   // const checkedUrls = []
   for (const url of passedUrls) {
     scrapeData(url, passedfields, passeddomains)
@@ -281,11 +262,13 @@ async function scrapeAllPages(
             }
             await new Promise((resolve) => setTimeout(resolve, 100));
           })
-          .catch((err) => {});
+          .catch((err) => { });
+       
       })
-      .catch((err) => {});
+      .catch((err) => { });
   }
 }
-
+ 
 // Start scraping all pages
 module.exports = { scrapeAllPages, createContentType, scrapeData };
+ 

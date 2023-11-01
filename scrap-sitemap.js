@@ -90,8 +90,7 @@ const fetchScrapedUrls = async () => {
 
                     });
                     // config settings configuring
-                    // ApplyConfig(groupedUrls)
-                    console.log(">>> grouped urls here ", groupedUrls)
+                    ApplyConfig(groupedUrls)
                 } else {
                     if (errors <= 2) {
                         console.log("Trying again ...")

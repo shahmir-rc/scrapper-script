@@ -40,6 +40,19 @@ const getContentTypeField = (source) => {
       localized: false,
       type: "RichText",  
     },
+   "reference": {
+      id: convertToCamelCase(source.field),
+      name: source.field,
+      required: false,
+      localized: false,
+      type: 'Link',
+      linkType: 'Entry',
+      validations: [
+        {
+          linkContentType: source?.linkContentType ?? []
+        }
+      ]
+    },
     media: {
       id: convertToCamelCase(source.field),
       name: source.field,
