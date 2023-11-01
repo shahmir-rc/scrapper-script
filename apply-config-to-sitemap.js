@@ -1,5 +1,5 @@
 const { contentfulSpaceId } = require("./constant");
-const { createReferenceModel } = require("./create-reference-model");
+const { createReferenceModel, createParentModelWithReference, createComponentsModels, scrapDataForComponents, createEntryForParentWithReferences } = require("./create-reference-model");
 const { client } = require("./lib/client");
 const { scrapeAllPages, createContentType, scrapeData } = require("./scrapper");
 const { requiredContentTypes } = require("./sitemap-config")
@@ -7,7 +7,6 @@ const { consoleSuccess, consoleInfo } = require("./utils/helpers.js");
 
 const ApplyConfig = async (groupedUrls) => {
     for (const ele of requiredContentTypes) {
-        console.log("element here >>", ele)
         const urlsToScrap = groupedUrls[ele.slug];
         if (urlsToScrap?.length > 0) {
             await client
@@ -26,11 +25,22 @@ const ApplyConfig = async (groupedUrls) => {
                     // await scrapeAllPages(urlsToScrap, ele.fields, ele.contentType, ele.domains, ele.slug); // Wait for the scraping to complete
                     // });
                     // })
-                    await createComponentsModel({ pageURL:"", data:ele.fields, passedcontentType: ele.contentType, passedfields: ele.fields }).then(async (res) => {
-                        console.log("response here >>>>", res)
+                    await createComponentsModels({ pageURL: "", passedComponents: ele.components }).then(async (res) => {
+                        await createParentModelWithReference({ pageURL: "", data: ele.fields, passedcontentType: ele.contentType, passedReferences: res?.createdModelsOfComponents }).then(async (_res) => {
+                            if (res) {
+                                for (const url of urlsToScrap) {
+                                    await scrapDataForComponents({ components: ele?.components, url: url, domains: ele?.domains }).then(async (_ids) => {
+                                        await createEntryForParentWithReferences({ components: ele?.components, url: url, domains: ele?.domains,fields:ele?.fields }).then((_parent)=>{
+                                            console.log("Whole page published for",_parent?.name)
+                                        })
+                                    })
+                                }
+                            } else {
+                                console.log("error in parent model")
+                            }
+                        })
                     });
                 })
-            console.log("urls to scrap here >>>", urlsToScrap)
         } else {
             console.log("no pages defined for", ele.slug)
         }

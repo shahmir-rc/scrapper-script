@@ -24,7 +24,7 @@ function convertToCamelCase(input) {
     .toLowerCase()
     .replace(/[^a-zA-Z0-9]+(.)/g, (_, char) => char.toUpperCase());
 }
-const getContentTypeField = (source) => {
+const getContentTypeField = (source,references) => {
   let FIELD_TYPES = {
     "symbol": {
       id: convertToCamelCase(source.field),
@@ -66,7 +66,7 @@ const getContentTypeField = (source) => {
         linkType: 'Entry',
         validations: [
           {
-            linkContentType: ["productstest"],
+            linkContentType: references,
           },
         ],
       },

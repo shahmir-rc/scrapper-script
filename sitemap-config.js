@@ -5,22 +5,28 @@ module.exports = {
             slug: "showering",
             components: [
                 {
-                    name: 'Hero',
+                    name: 'Hero1b',
                     fields: [
                         // Slug field will be auto generated no need to add here.
                         {
-                            field: "content",
-                            selector: ".main-content",
-                            fieldType: "Rich text",
+                            field: "title",
+                            selector: ".hero-header .hero-text h1",
+                            fieldType: "Symbol",
+                            required: true,
+                            defaultValue: "",
+                        },
+                        {
+                            field: "description",
+                            selector: ".hero-header .hero-text p",
+                            fieldType: "Symbol",
                             required: true,
                             defaultValue: "",
                         },
                     ],
                     contentType: {
-                        contentTypeName: 'showering',
-                        contentTypeId: 'showering',
+                        contentTypeName: 'Hero1b',
+                        contentTypeId: 'hero1b',
                     },
-                    reference: "",
                 }
             ],
             fields: [
@@ -34,8 +40,8 @@ module.exports = {
                 },
             ],
             contentType: {
-                contentTypeName: 'showering',
-                contentTypeId: 'showering',
+                contentTypeName: 'showering2c',
+                contentTypeId: 'showering2c',
             },
             domains: {
                 image_base_path: "https://security.gallagher.com", // Media base path

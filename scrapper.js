@@ -270,4 +270,4 @@ async function scrapeAllPages(passedUrls, passedfields, passedcontentType, passe
 }
 
 // Start scraping all pages
-module.exports = { scrapeAllPages, createContentType, scrapeData };
+module.exports = {createNewEntry,logError, scrapeAllPages, createContentType, scrapeData };
