@@ -38,7 +38,7 @@ const getContentTypeField = (source) => {
       name: source.field,
       required: false,
       localized: false,
-      type: "RichText",  
+      type: "RichText",
     },
     media: {
       id: convertToCamelCase(source.field),
@@ -46,7 +46,7 @@ const getContentTypeField = (source) => {
       required: false,
       localized: false,
       type: "Link",
-      linkType: "Asset" 
+      linkType: "Asset"
     },
     number: {
       id: convertToCamelCase(source.field),
@@ -55,6 +55,22 @@ const getContentTypeField = (source) => {
       localized: false,
       type: "Number",
     },
+    references: {
+      id: convertToCamelCase(source.field),
+      name: source.field,
+      required: false,
+      localized: false,
+      type: "Array",
+      items: {
+        type: 'Link',
+        linkType: 'Entry',
+        validations: [
+          {
+            linkContentType: ["productstest"],
+          },
+        ],
+      },
+    }
   };
 
   return FIELD_TYPES[source?.fieldType.toLowerCase()];
