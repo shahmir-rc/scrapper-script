@@ -1,6 +1,6 @@
 const getFieldContent = (source) => {
   let FIELD_TYPES = {
-    "symbol": {
+    symbol: {
       "en-US": source?.content,
     },
     "rich text": {
@@ -15,6 +15,26 @@ const getFieldContent = (source) => {
         },
       },
     },
+    // reference: {
+    //   "en-US": source?.entries?.map((entryID) => {
+    //     return {
+    //       sys: {
+    //         type: "Link",
+    //         linkType: "Entry",
+    //         id: entryID,
+    //       },
+    //     };
+    //   }),
+    // },"7w7kQXHdOeEBKGHvQf276O"
+    reference: {
+      "en-US": {
+        sys: {
+          type: "Link",
+          linkType: "Entry",
+          id: source?.entries && source?.entries[0],
+        },
+      },
+    },
   };
 
   return FIELD_TYPES[source?.fieldType.toLowerCase()];
@@ -26,46 +46,53 @@ function convertToCamelCase(input) {
 }
 const getContentTypeField = (source) => {
   let FIELD_TYPES = {
-    "symbol": {
+    symbol: {
       id: convertToCamelCase(source.field),
       name: source.field,
-      required: false,
-      localized: false,
+      required: source?.validation?.required ?? false,
+      localized: source?.validation?.localized ?? false,
       type: "Symbol",
+    },
+    text: {
+      id: convertToCamelCase(source.field),
+      name: source.field,
+      required: source?.validation?.required ?? false,
+      localized: source?.validation?.localized ?? false,
+      type: "Text",
     },
     "rich text": {
       id: convertToCamelCase(source.field),
       name: source.field,
-      required: false,
-      localized: false,
-      type: "RichText",  
+      required: source?.validation?.required ?? false,
+      localized: source?.validation?.localized ?? false,
+      type: "RichText",
     },
-   "reference": {
+    reference: {
       id: convertToCamelCase(source.field),
       name: source.field,
-      required: false,
-      localized: false,
-      type: 'Link',
-      linkType: 'Entry',
+      required: source?.validation?.required ?? false,
+      localized: source?.validation?.localized ?? false,
+      type: "Link",
+      linkType: "Entry",
       validations: [
         {
-          linkContentType: source?.linkContentType ?? []
-        }
-      ]
+          linkContentType: source?.linkContentType ?? [],
+        },
+      ],
     },
     media: {
       id: convertToCamelCase(source.field),
       name: source.field,
-      required: false,
-      localized: false,
+      required: source?.validation?.required ?? false,
+      localized: source?.validation?.localized ?? false,
       type: "Link",
-      linkType: "Asset" 
+      linkType: "Asset",
     },
     number: {
       id: convertToCamelCase(source.field),
       name: source.field,
-      required: false,
-      localized: false,
+      required: source?.validation?.required ?? false,
+      localized: source?.validation?.localized ?? false,
       type: "Number",
     },
   };
@@ -73,4 +100,4 @@ const getContentTypeField = (source) => {
   return FIELD_TYPES[source?.fieldType.toLowerCase()];
 };
 
-module.exports = { getFieldContent, getContentTypeField };
+module.exports = { getFieldContent, getContentTypeField, convertToCamelCase };

@@ -124,11 +124,11 @@ async function scrapeData({ url, page, reference }) {
         let tasks = [];
 
         // Created slug field
-        data.push({
-          field: "slug",
-          fieldType: "Symbol",
-          content: url.split("/").pop(),
-        });
+        // data.push({
+        //   field: "slug",
+        //   fieldType: "Symbol",
+        //   content: url.split("/").pop(),
+        // });
 
         const indexToUpdate = data.findIndex(
           (el) => el.reference === reference
@@ -288,4 +288,4 @@ async function scrapeAllPages(
 }
 
 // Start scraping all pages
-module.exports = { scrapeAllPages, createContentType, scrapeData };
+module.exports = { scrapeAllPages, createContentType };
